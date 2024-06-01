@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+#set -euox pipefail
+set -uo pipefail
+
+# ANSI colors
+RED='\033[1;31m'
+BLUE='\033[1;34m'
+GREEN='\033[1;32m'
+NONE='\033[0m'
+
+# Application version file
+VERSION_FILE=data/version.txt
+
+# ----------------------------------------------------------------------------
+
+function log  {
+    printf "$1\n"
+}
+
+function fail {
+    printf "\n${RED}$1, exiting...${NONE}\n"
+    exit 1
+}
+
+# ----------------------------------------------------------------------------
+
+# Check that there are no uncommitted or untracked files
+log "Checking uncommitted files..."
+NUM_UNCOMMITTED=$(git status --porcelain=v1 | wc -l | xargs)
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git status' failed"
+fi
+if [[ $NUM_UNCOMMITTED -ne 0 ]]; then
+    fail "There are uncommitted files"
+fi
+
+# Update local repo
+log "Updating files..."
+git pull
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git pull' failed"
+fi
+
+# Read application version
+VERSION=$(cat $VERSION_FILE)
+if [[ $? -ne 0 ]]; then
+    fail "Application version file '$VERSION_FILE' not found"
+fi
+
+# Name of git tag
+GIT_TAG="rocky-$VERSION"
+log "Using tag $GIT_TAG..."
+
+# List all existing git tags
+log "Checking git tags..."
+TAGS_LIST=$(git tag)
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git tag' failed"
+fi
+
+# Check that git tag does not exist
+echo $TAGS_LIST | grep $GIT_TAG > /dev/null
+if [[ $? -eq 0 ]]; then
+    fail "Git tag $GIT_TAG exists"
+fi
+
+# Run tests
+log "Running tests..."
+roc test src/rocky.roc
+if [[ $? -ne 0 ]]; then
+    fail "Tests failed"
+fi
+
+# Build application binary
+log "Building application..."
+roc build --optimize --output ./ src/rocky.roc
+if [[ $? -ne 0 ]]; then
+    fail "Build failed"
+fi
+
+# Create tar files
+BIN_ARCHIVE_FILE="rocky-$VERSION-bin.tar.gz"
+SRC_ARCHIVE_FILE="rocky-$VERSION-src.tar.gz"
+
+log "Creating binary archive..."
+tar -czf "$BIN_ARCHIVE_FILE" rocky README.md LICENSE
+if [[ $? -ne 0 ]]; then
+    fail "Creating archive file '$BIN_ARCHIVE_FILE' failed"
+fi
+
+log "Creating source archive..."
+tar -czf "$SRC_ARCHIVE_FILE" src data README.md LICENSE
+if [[ $? -ne 0 ]]; then
+    fail "Creating archive file '$SRC_ARCHIVE_FILE' failed"
+fi
+
+# Ask user to continue with tagging
+read -p "Do you want to create and push tag $GIT_TAG? (Y/n): " CONTINUE
+
+if [[ "$CONTINUE" == "Y" || "$CONTINUE" == "y" || "$CONTINUE" == "" ]]; then
+    log "Tagging files..."
+    git tag -a "$GIT_TAG" -m "Version $VERSION"
+    if [[ $? -ne 0 ]]; then
+        fail "Command 'git tag -a $GIT_TAG' failed"
+    fi
+
+    log "Pushing tag..."
+    git push origin "$GIT_TAG"
+    if [[ $? -ne 0 ]]; then
+        fail "Command 'git push origin $GIT_TAG' failed"
+    fi
+else
+    fail "Aborted by user"
+fi
