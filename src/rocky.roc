@@ -60,6 +60,28 @@ expect
     && List.len actual.moveHistory
     == 1
 
+helpText =
+    """
+    Available commands
+    ------------------
+    board     = show current position
+    force     = turn force mode on
+    go        = turn force mode off and set the chess engine to
+                play the color that is on move
+    help      = show this help text
+    new       = start a new game with the chess engine as black
+    ping      = ping the chess engine
+    playother = turn force mode off and set the chess engine to
+                play the color that is not on move
+    quit      = quit program
+    remove    = retract latest move pair, and let the user move again
+    usermove  = submit a move in coordinate algebraic notation
+    xboard    = put the engine in xboard mode
+    """
+
+helpCmd = \game, _args ->
+    Ok (game, helpText)
+
 newCmd = \game, _args ->
     # Keep feature settings
     Ok ({ initialGame & debug: game.debug }, "")
@@ -195,10 +217,11 @@ commands = Dict.fromList [
     ("computer", computerCmd),
     ("force", forceCmd),
     ("go", goCmd),
+    ("help", helpCmd),
     ("new", newCmd),
     ("otim", otimCmd),
     ("ping", pingCmd),
-    ("playOther", playOtherCmd),
+    ("playother", playOtherCmd),
     ("protover", protoverCmd),
     ("rejected", rejectedCmd),
     ("remove", removeCmd),
@@ -246,7 +269,9 @@ loop = \game ->
             Task.fromResult (Err ListWasEmpty)
 
 run =
-    Stdout.line! "# Type 'quit' to quit."
+    Stdout.line! "# Welcome to rocky $(version)"
+    Stdout.line! "# Type 'help' to get help"
+    Stdout.line! "# Type 'quit' to quit"
     Task.loop! initialGame loop
     Stdout.line! "# Bye"
 
