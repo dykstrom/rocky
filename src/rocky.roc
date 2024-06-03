@@ -5,8 +5,8 @@ app [main] {
 import Board exposing [initialBoard]
 import Color
 import Finder
-import Game exposing [initialGame]
-import Move
+import Game exposing [Game, initialGame]
+import Move exposing [Move]
 import MoveParser
 import cli.Stderr
 import cli.Stdin
@@ -19,8 +19,13 @@ import "../data/version.txt" as version : Str
 # Xboard comands
 # ----------------------------------------------------------------------------
 
-acceptedCmd = \game, _args ->
-    Ok (game, "")
+acceptedCmd = \game, args ->
+    when args is
+        ["debug"] -> Ok ({ game & debug: On }, "")
+        _ -> Ok (game, "")
+
+expect acceptedCmd { debug: Off } ["debug"] == Ok ({ debug: On }, "")
+expect acceptedCmd { debug: Off } ["ping"] == Ok ({ debug: Off }, "")
 
 boardCmd = \game, _args ->
     Ok (game, Board.toStr game.board)
@@ -55,20 +60,22 @@ expect
     && List.len actual.moveHistory
     == 1
 
-newCmd = \_game, _args ->
-    Ok (initialGame, "")
+newCmd = \game, _args ->
+    # Keep feature settings
+    Ok ({ initialGame & debug: game.debug }, "")
 
-expect newCmd {} [] == Ok (initialGame, "")
+expect newCmd { debug: On } [] == Ok ({ initialGame & debug: On }, "")
 
 otimCmd = \game, _args ->
     Ok (game, "")
 
 pingCmd = \game, args ->
-    List.get args 0
-    |> Result.map \arg -> (game, "pong $(arg)")
-    |> Result.onErr \_ -> Err SyntaxError
+    when args is
+        [arg] -> Ok (game, "pong $(arg)")
+        _ -> Err SyntaxError
 
 expect pingCmd {} ["1"] == Ok ({}, "pong 1")
+expect pingCmd {} [] == Err SyntaxError
 
 playOtherCmd = \game, _args ->
     Ok ({ game & forceMode: Off, engineColor: Color.flipColor game.activeColor }, "")
@@ -79,7 +86,7 @@ expect
     Ok ({ forceMode: Off, activeColor: Black, engineColor: White }, "")
 
 protoverCmd = \game, _args ->
-    Ok (game, "feature ping=1\nfeature setboard=0\nfeature playother=1\nfeature san=0\nfeature usermove=1\nfeature time=1\nfeature draw=0\nfeature sigint=0\nfeature sigterm=0\nfeature reuse=1\nfeature analyze=0\nfeature myname=\"rocky $(version)\"\nfeature variants=\"normal\"\nfeature colors=0\nfeature ics=0\nfeature name=0\nfeature pause=0\nfeature done=1")
+    Ok (game, "feature ping=1\nfeature setboard=0\nfeature playother=1\nfeature san=0\nfeature usermove=1\nfeature time=1\nfeature draw=0\nfeature sigint=0\nfeature sigterm=0\nfeature reuse=1\nfeature analyze=0\nfeature myname=\"rocky $(Str.trim version)\"\nfeature variants=\"normal\"\nfeature colors=0\nfeature ics=0\nfeature name=0\nfeature pause=0\nfeature debug=1\nfeature done=1")
 
 rejectedCmd = \game, _args ->
     Ok (game, "")
@@ -128,9 +135,9 @@ usermoveCmd = \game, args ->
 makeEngineMove = \gameBeforeMove ->
     engineMove = Finder.findMove gameBeforeMove.board gameBeforeMove.boardHistory gameBeforeMove.activeColor
     when engineMove is
-        FoundMove { move: move, score: _ } ->
+        FoundMove { move: move, score: score } ->
             gameAfterMove = Game.makeMove gameBeforeMove move
-            Ok (gameAfterMove, "move $(Move.toStr move)")
+            Ok (gameAfterMove, formatMove gameAfterMove move score)
 
         Mated ->
             if
@@ -141,6 +148,11 @@ makeEngineMove = \gameBeforeMove ->
                 Ok (gameBeforeMove, "1-0 {White mates}")
 
         Draw -> Ok (gameBeforeMove, "1/2-1/2 {Stalemate}")
+
+formatMove : Game, Move, I64 -> Str
+formatMove = \game, move, score ->
+    debug game "Found move $(Move.toStr move) with score $(Num.toStr ((Num.toF64 score) / 1000.0))"
+    |> Str.concat "move $(Move.toStr move)"
 
 # Force move On
 expect
@@ -249,6 +261,13 @@ handleErr = \error ->
 # ----------------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------------
+
+debug : Game, Str -> Str
+debug = \game, msg ->
+    if game.debug == On then
+        Str.concat "# " msg |> Str.concat "\n"
+    else
+        ""
 
 ## Run 'fun' with the given game and args, and return the resulting game.
 runTest = \fun, game, args ->
