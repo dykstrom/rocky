@@ -1,5 +1,6 @@
-module [Bitboard, Board, initialBoard, makeMove, colorAt, pieceAt, isCastlingAllowed, isEnPassantAllowed, enPassantSquare, halfMoveClock, equalsIgnoreFlags, toStr, withMoves, bbToStr, bbToIdxs]
+module [Bitboard, Board, initialBoard, makeMove, colorAt, pieceAt, isCastlingAllowed, isEnPassantAllowed, enPassantSquare, halfMoveClock, equalsIgnoreFlags, toStr, toPrettyStr, withMoves, bbToStr, bbToIdxs]
 
+import Ansi
 import Color exposing [Color]
 import L
 import Move exposing [Move, e1g1, e2e4, e7e5, f1c4, f3g1, f6g8, f8c5, g7g5, h2h4, h4h5, h5g6, ng1f3, ng8f6]
@@ -186,6 +187,32 @@ toStr = \board ->
     |> Str.joinWith "\n"
     |> \s -> Str.concat "   ---------- \n" s
     |> Str.concat "\n   ---------- \n    abcdefgh "
+
+toPrettyStr : Board -> Str
+toPrettyStr = \board ->
+    ranks = List.range { start: At 7, end: At 0 }
+    files = List.range { start: At 0, end: At 7 }
+
+    List.map ranks \r ->
+        List.map files \f ->
+            square = Square.frToId f r
+            color = colorAt board square
+            piece = pieceAt board square
+            character =
+                when color is
+                    Ok White -> Piece.toPrettyStr piece White
+                    Ok Black -> Piece.toPrettyStr piece Black
+                    _ -> " "
+            Str.concat (backgroundFor f r) character |> Str.concat Ansi.default
+        |> Str.joinWith ""
+        |> \line -> Str.concat (Num.toStr (r + 1)) " │ " |> Str.concat line |> Str.concat " │"
+    |> Str.joinWith "\n"
+    |> \s -> Str.concat "  ┌──────────┐\n" s
+    |> Str.concat "\n  └──────────┘\n    abcdefgh "
+
+backgroundFor : U8, U8 -> Str
+backgroundFor = \file, rank ->
+    if file % 2 == rank % 2 then Ansi.dark else Ansi.light
 
 makeMove : Board, Move, Color -> Board
 makeMove = \board, move, color ->

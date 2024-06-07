@@ -13,6 +13,7 @@ Game : {
     boardHistory : List Board,
     board : Board,
     debug : [On, Off],
+    pretty : [On, Off],
 }
 
 initialGame : Game
@@ -25,6 +26,7 @@ initialGame = {
     boardHistory: [],
     board: initialBoard,
     debug: Off,
+    pretty: On,
 }
 
 makeMove : Game, Move -> Game

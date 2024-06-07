@@ -1,5 +1,6 @@
-module [PieceIdx, fromStr, toStr, none, bishop, king, knight, pawn, queen, rook]
+module [PieceIdx, fromStr, toStr, toPrettyStr, none, bishop, king, knight, pawn, queen, rook]
 
+import Color exposing [Color]
 import S
 
 PieceIdx : U64
@@ -28,8 +29,32 @@ expect fromStr "r" == Ok rook
 
 toStr : PieceIdx -> Str
 toStr = \piece ->
-    S.substr pieces { start: piece, len: 1 } |> Result.withDefault "?" # Cannot fail?
+    when S.substr pieces { start: piece, len: 1 } is
+        Ok s -> s
+        _ -> crash "Should not happen: unknown piece: $(Num.toStr piece)"
 
 expect toStr none == " "
 expect toStr bishop == "b"
 expect toStr rook == "r"
+
+toPrettyStr : PieceIdx, Color -> Str
+toPrettyStr = \piece, color ->
+    when (piece, color) is
+        (0, White) -> " "
+        (1, White) -> "♗"
+        (2, White) -> "♔"
+        (3, White) -> "♘"
+        (4, White) -> "♙"
+        (5, White) -> "♕"
+        (6, White) -> "♖"
+        (0, Black) -> " "
+        (1, Black) -> "♝"
+        (2, Black) -> "♚"
+        (3, Black) -> "♞"
+        (4, Black) -> "♟︎"
+        (5, Black) -> "♛"
+        (6, Black) -> "♜"
+        _ -> crash "Should not happen: unknown piece: $(Num.toStr piece)"
+
+expect toPrettyStr knight White == "♘"
+expect toPrettyStr queen Black == "♛"

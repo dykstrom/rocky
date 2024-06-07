@@ -28,7 +28,7 @@ expect acceptedCmd { debug: Off } ["debug"] == Ok ({ debug: On }, "")
 expect acceptedCmd { debug: Off } ["ping"] == Ok ({ debug: Off }, "")
 
 boardCmd = \game, _args ->
-    Ok (game, Board.toStr game.board)
+    Ok (game, if game.pretty == On then Board.toPrettyStr game.board else Board.toStr game.board)
 
 computerCmd = \game, _args ->
     Ok (game, "")
@@ -71,6 +71,7 @@ helpText =
     help      = show this help text
     new       = start a new game with the chess engine as black
     ping      = ping the chess engine
+    plain     = show the board in plain text without any colors
     playother = turn force mode off and set the chess engine to
                 play the color that is not on move
     quit      = quit program
@@ -98,6 +99,9 @@ pingCmd = \game, args ->
 
 expect pingCmd {} ["1"] == Ok ({}, "pong 1")
 expect pingCmd {} [] == Err SyntaxError
+
+plainCmd = \game, _args ->
+    Ok ({ game & pretty: Off }, "")
 
 playOtherCmd = \game, _args ->
     Ok ({ game & forceMode: Off, engineColor: Color.flipColor game.activeColor }, "")
@@ -221,6 +225,7 @@ commands = Dict.fromList [
     ("new", newCmd),
     ("otim", otimCmd),
     ("ping", pingCmd),
+    ("plain", plainCmd),
     ("playother", playOtherCmd),
     ("protover", protoverCmd),
     ("rejected", rejectedCmd),
@@ -269,9 +274,8 @@ loop = \game ->
             Task.fromResult (Err ListWasEmpty)
 
 run =
-    Stdout.line! "# Welcome to rocky $(version)"
+    Stdout.line! "# Welcome to rocky $(Str.trim version)"
     Stdout.line! "# Type 'help' to get help"
-    Stdout.line! "# Type 'quit' to quit"
     Task.loop! initialGame loop
     Stdout.line! "# Bye"
 
