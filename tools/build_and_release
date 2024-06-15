@@ -5,9 +5,7 @@ set -uo pipefail
 
 # ANSI colors
 RED='\033[1;31m'
-BLUE='\033[1;34m'
-GREEN='\033[1;32m'
-NONE='\033[0m'
+DEFAULT='\033[0m'
 
 # Application version file
 VERSION_FILE=data/version.txt
@@ -19,7 +17,7 @@ function log  {
 }
 
 function fail {
-    printf "\n${RED}$1, exiting...${NONE}\n"
+    printf "\n${RED}$1, exiting...${DEFAULT}\n"
     exit 1
 }
 
@@ -43,7 +41,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # Read application version
-VERSION=$(cat $VERSION_FILE)
+VERSION=$(cat $VERSION_FILE | xargs)
 if [[ $? -ne 0 ]]; then
     fail "Application version file '$VERSION_FILE' not found"
 fi

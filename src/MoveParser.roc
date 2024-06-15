@@ -1,4 +1,4 @@
-module [parse]
+module [isMove, parse]
 
 import Board exposing [Board, initialBoard]
 import Checker
@@ -10,8 +10,15 @@ import S
 import Square exposing [SquareIdx, a2, a7, a8, b1Idx, c1Idx, c8Idx, e1Idx, e8Idx, f5Idx, g1Idx, g8Idx]
 import Util
 
+isMove : Str -> Bool
+isMove = \str ->
+    if S.len str == 4 || S.len str == 5 then
+        Result.isOk (parseFrom str) && Result.isOk (parseTo str)
+    else
+        Bool.false
+
 parse : Board, Color, Str -> Result Move [SyntaxError, IllegalMove]
-parse = \board, color, str ->
+parse = \board, sideToMove, str ->
     if S.len str == 4 || S.len str == 5 then
         from = parseFrom str
         to = parseTo str
@@ -28,8 +35,8 @@ parse = \board, color, str ->
                 (fromIdx == toIdx)
                 || (movedIdx == Piece.none)
                 || (movedColor == Err SquareIsEmpty)
-                || (movedColor != Ok color)
-                || (capturedColor == Ok color)
+                || (movedColor != Ok sideToMove)
+                || (capturedColor == Ok sideToMove)
                 || (captured == Ok Piece.king)
                 || (promoted == Ok Piece.king)
                 || (promoted == Ok Piece.pawn)
@@ -38,7 +45,7 @@ parse = \board, color, str ->
             then
                 Err IllegalMove
             else
-                createAndTestMove board color fromIdx toIdx movedIdx captured promoted
+                createAndTestMove board sideToMove fromIdx toIdx movedIdx captured promoted
         else
             Err SyntaxError
     else

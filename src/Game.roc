@@ -12,6 +12,8 @@ Game : {
     moveNumber : U64,
     boardHistory : List Board,
     board : Board,
+    debug : [On, Off],
+    pretty : [On, Off],
 }
 
 initialGame : Game
@@ -23,6 +25,8 @@ initialGame = {
     moveNumber: 1,
     boardHistory: [],
     board: initialBoard,
+    debug: Off,
+    pretty: On,
 }
 
 makeMove : Game, Move -> Game

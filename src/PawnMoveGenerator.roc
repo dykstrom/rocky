@@ -1,6 +1,8 @@
 module [generateMoves]
 
 import Board exposing [Bitboard, Board, initialBoard]
+import Fen
+import FenParser
 import L
 import Move exposing [Move]
 import Num exposing [bitwiseAnd, bitwiseNot, bitwiseOr, shiftLeftBy, shiftRightZfBy]
@@ -22,6 +24,15 @@ generateMoves = \board, theirPieces ->
         generateWhiteMoves board theirPieces
     else
         generateBlackMoves board theirPieces
+
+expect
+    board = FenParser.fenToBoard Fen.whiteCanPromote
+    moves = generateMoves board board.black |> toStr
+    Set.fromList moves == Set.fromList ["b2b4", "c2c4", "e2e4", "f2f4", "g2g4", "h2h4", "b2a3", "b2b3", "c2c3", "e2e3", "f2f3", "g2g3", "h2h3", "e7d8b", "e7d8n", "e7d8q", "e7d8r", "e7f8b", "e7f8n", "e7f8q", "e7f8r"]
+expect
+    board = FenParser.fenToBoard Fen.blackCanCaptureEp
+    moves = generateMoves board board.white |> toStr
+    Set.fromList moves == Set.fromList ["b7b5", "c7c5", "e7e5", "f7f5", "g7g5", "h7h5", "b7b6", "c7c6", "e7e6", "f7f6", "g7g6", "h7h6", "a4a3", "a4b3", "c7d6", "e7d6"]
 
 generateWhiteMoves : Board, Bitboard -> List Move
 generateWhiteMoves = \board, theirPieces ->

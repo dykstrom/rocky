@@ -1,5 +1,6 @@
-module [Bitboard, Board, initialBoard, makeMove, colorAt, pieceAt, isCastlingAllowed, isEnPassantAllowed, enPassantSquare, halfMoveClock, equalsIgnoreFlags, toStr, withMoves, bbToStr, bbToIdxs]
+module [Bitboard, Board, emptyBoard, initialBoard, makeMove, colorAt, pieceAt, isLegal, isCastlingAllowed, withCastlingRights, isEnPassantAllowed, enPassantSquare, withEnPassantSquare, halfMoveClock, withHalfMoveClock, equalsIgnoreFlags, toStr, toPrettyStr, withMoves, bbToStr, bbToIdxs]
 
+import Ansi
 import Color exposing [Color]
 import L
 import Move exposing [Move, e1g1, e2e4, e7e5, f1c4, f3g1, f6g8, f8c5, g7g5, h2h4, h4h5, h5g6, ng1f3, ng8f6]
@@ -41,6 +42,18 @@ notHalfMoveMask = bitwiseNot halfMoveMask
 notWhiteCastlingMask = bitwiseNot (bitwiseOr wksCastlingMask wqsCastlingMask)
 notBlackCastlingMask = bitwiseNot (bitwiseOr bksCastlingMask bqsCastlingMask)
 notEnPassantMask = bitwiseNot enPassantMask
+
+emptyBoard = {
+    white: 0,
+    black: 0,
+    bishop: 0,
+    king: 0,
+    knight: 0,
+    queen: 0,
+    pawn: 0,
+    rook: 0,
+    flags: 0,
+}
 
 initialBoard = {
     white: L.or [a1, b1, c1, d1, e1, f1, g1, h1, a2, b2, c2, d2, e2, f2, g2, h2],
@@ -99,6 +112,15 @@ expect pieceAt initialBoard e1 == Piece.king
 expect pieceAt initialBoard b8 == Piece.knight
 expect pieceAt initialBoard h8 == Piece.rook
 expect pieceAt initialBoard e4 == Piece.none
+
+isLegal : Board -> Bool
+isLegal = \board ->
+    (List.len (bbToIdxs (bitwiseAnd board.white board.king)) == 1)
+    &&
+    (List.len (bbToIdxs (bitwiseAnd board.black board.king)) == 1)
+
+expect isLegal initialBoard == Bool.true
+expect isLegal emptyBoard == Bool.false
 
 isCastlingAllowed : Board, SquareIdx, SquareIdx -> Bool
 isCastlingAllowed = \board, fromIdx, toIdx ->
@@ -187,6 +209,32 @@ toStr = \board ->
     |> \s -> Str.concat "   ---------- \n" s
     |> Str.concat "\n   ---------- \n    abcdefgh "
 
+toPrettyStr : Board -> Str
+toPrettyStr = \board ->
+    ranks = List.range { start: At 7, end: At 0 }
+    files = List.range { start: At 0, end: At 7 }
+
+    List.map ranks \r ->
+        List.map files \f ->
+            square = Square.frToId f r
+            color = colorAt board square
+            piece = pieceAt board square
+            character =
+                when color is
+                    Ok White -> Piece.toPrettyStr piece White
+                    Ok Black -> Piece.toPrettyStr piece Black
+                    _ -> " "
+            Str.concat (backgroundFor f r) character |> Str.concat Ansi.default
+        |> Str.joinWith ""
+        |> \line -> Str.concat (Num.toStr (r + 1)) " │ " |> Str.concat line |> Str.concat " │"
+    |> Str.joinWith "\n"
+    |> \s -> Str.concat "  ┌──────────┐\n" s
+    |> Str.concat "\n  └──────────┘\n    abcdefgh "
+
+backgroundFor : U8, U8 -> Str
+backgroundFor = \file, rank ->
+    if file % 2 == rank % 2 then Ansi.dark else Ansi.light
+
 makeMove : Board, Move, Color -> Board
 makeMove = \board, move, color ->
     fromId = Square.idxToId (Move.getFrom move)
@@ -211,7 +259,7 @@ makeMove = \board, move, color ->
             |> \b -> if promoted != Piece.none then promotePiece b toId promoted else b
     afterMove
     |> updateCastlingFlags fromId
-    |> updateEnPassantFlags (Move.getFrom move) (Move.getTo move) moved
+    |> updateEnPassantSquare (Move.getFrom move) (Move.getTo move) moved
     |> updateHalfMoveClock moved (captured != Piece.none)
 
 # Ok: White move
@@ -299,8 +347,17 @@ updateCastlingFlags = \board, fromId ->
     else
         board
 
-updateEnPassantFlags : Board, SquareIdx, SquareIdx, PieceIdx -> Board
-updateEnPassantFlags = \board, fromIdx, toIdx, moved ->
+withCastlingRights : Board, Color, PieceIdx -> Board
+withCastlingRights = \board, color, piece ->
+    when (color, piece) is
+        (White, 2) -> { board & flags: bitwiseOr board.flags wksCastlingMask }
+        (White, 5) -> { board & flags: bitwiseOr board.flags wqsCastlingMask }
+        (Black, 2) -> { board & flags: bitwiseOr board.flags bksCastlingMask }
+        (Black, 5) -> { board & flags: bitwiseOr board.flags bqsCastlingMask }
+        _ -> crash "Should not happen: unknown piece in withCastlingRights: $(Num.toStr piece)"
+
+updateEnPassantSquare : Board, SquareIdx, SquareIdx, PieceIdx -> Board
+updateEnPassantSquare = \board, fromIdx, toIdx, moved ->
     bitwiseAnd board.flags notEnPassantMask
     |> \flags ->
         if moved == Piece.pawn then
@@ -315,14 +372,23 @@ updateEnPassantFlags = \board, fromIdx, toIdx, moved ->
     |> \flags -> { board & flags }
 
 expect
-    board = updateEnPassantFlags initialBoard d7Idx d5Idx Piece.pawn
+    board = updateEnPassantSquare initialBoard d7Idx d5Idx Piece.pawn
     enPassantSquare board == d6Idx && isEnPassantAllowed board
 expect
-    board = updateEnPassantFlags initialBoard d6Idx d5Idx Piece.pawn
+    board = updateEnPassantSquare initialBoard d6Idx d5Idx Piece.pawn
     enPassantSquare board == 0 && isEnPassantAllowed board == Bool.false
 expect
-    board = updateEnPassantFlags initialBoard d7Idx d5Idx Piece.rook
+    board = updateEnPassantSquare initialBoard d7Idx d5Idx Piece.rook
     enPassantSquare board == 0 && isEnPassantAllowed board == Bool.false
+
+withEnPassantSquare : Board, SquareIdx -> Board
+withEnPassantSquare = \board, square ->
+    { board & flags: bitwiseAnd board.flags notEnPassantMask |> bitwiseOr (shiftLeftBy square enPassantOffset) }
+
+expect
+    board = withEnPassantSquare initialBoard d5Idx
+    (isEnPassantAllowed board == Bool.true)
+    && (enPassantSquare board == d5Idx)
 
 updateHalfMoveClock : Board, PieceIdx, Bool -> Board
 updateHalfMoveClock = \board, moved, isCapture ->
@@ -330,6 +396,14 @@ updateHalfMoveClock = \board, moved, isCapture ->
         { board & flags: bitwiseAnd board.flags notHalfMoveMask }
     else
         { board & flags: board.flags + 1 }
+
+withHalfMoveClock : Board, U64 -> Board
+withHalfMoveClock = \board, clock ->
+    { board & flags: bitwiseAnd board.flags notHalfMoveMask |> bitwiseOr clock }
+
+expect
+    board = withHalfMoveClock initialBoard 17
+    halfMoveClock board == 17
 
 moveFrom : Board, SquareId, PieceIdx, Color -> Board
 moveFrom = \board, square, moved, color ->
@@ -347,7 +421,7 @@ moveFrom = \board, square, moved, color ->
             4 -> (board.bishop, board.king, board.knight, bitwiseXor board.pawn square, board.queen, board.rook)
             5 -> (board.bishop, board.king, board.knight, board.pawn, bitwiseXor board.queen square, board.rook)
             6 -> (board.bishop, board.king, board.knight, board.pawn, board.queen, bitwiseXor board.rook square)
-            _ -> crash "Should not happen: unknown piece: $(Num.toStr moved)"
+            _ -> crash "Should not happen: unknown piece in moveFrom: $(Num.toStr moved)"
 
     { board &
         white: newWhite,
@@ -376,7 +450,7 @@ moveTo = \board, square, moved, color ->
             4 -> (board.bishop, board.king, board.knight, bitwiseXor board.pawn square, board.queen, board.rook)
             5 -> (board.bishop, board.king, board.knight, board.pawn, bitwiseXor board.queen square, board.rook)
             6 -> (board.bishop, board.king, board.knight, board.pawn, board.queen, bitwiseXor board.rook square)
-            _ -> crash "Should not happen: unknown piece: $(Num.toStr moved)"
+            _ -> crash "Should not happen: unknown piece in moveTo: $(Num.toStr moved)"
 
     { board &
         white: newWhite,

@@ -2,6 +2,8 @@ module [generateMoves]
 
 import Board exposing [Bitboard, Board, initialBoard]
 import Color exposing [Color]
+import Fen
+import FenParser
 import Move exposing [Move]
 import Num exposing [bitwiseAnd]
 import Piece
@@ -176,6 +178,10 @@ generateMoves = \board, myPieces, theirPieces, sideToMove ->
         Err _ -> crash "Should not happen: king not found"
 
 expect generateMoves initialBoard initialBoard.white initialBoard.black White == []
+expect
+    board = FenParser.fenToBoard Fen.whiteCanCastleQs
+    moves = generateMoves board board.white board.black White |> toStr
+    Set.fromList moves == Set.fromList ["e1e2", "e1d2", "e1d1", "e1c1"]
 
 generateCastlingMoves : Board, SquareIdx, Color -> List Move
 generateCastlingMoves = \board, fromIdx, sideToMove ->
