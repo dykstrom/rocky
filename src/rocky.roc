@@ -4,6 +4,7 @@ app [main] {
 
 import Board exposing [initialBoard]
 import Color
+import FenParser
 import Finder
 import Game exposing [Game, initialGame]
 import Move exposing [Move]
@@ -76,6 +77,7 @@ helpText =
                 play the color that is not on move
     quit      = quit program
     remove    = retract latest move pair, and let the user move again
+    setboard  = set current position to the given FEN position
     usermove  = submit a move in coordinate algebraic notation
     xboard    = put the engine in xboard mode
     """
@@ -84,10 +86,10 @@ helpCmd = \game, _args ->
     Ok (game, helpText)
 
 newCmd = \game, _args ->
-    # Keep feature settings
-    Ok ({ initialGame & debug: game.debug }, "")
+    # Keep feature and settings
+    Ok ({ initialGame & debug: game.debug, pretty: game.pretty }, "")
 
-expect newCmd { debug: On } [] == Ok ({ initialGame & debug: On }, "")
+expect newCmd { debug: On, pretty: Off } [] == Ok ({ initialGame & debug: On, pretty: Off }, "")
 
 otimCmd = \game, _args ->
     Ok (game, "")
@@ -112,7 +114,7 @@ expect
     Ok ({ forceMode: Off, activeColor: Black, engineColor: White }, "")
 
 protoverCmd = \game, _args ->
-    Ok (game, "feature ping=1\nfeature setboard=0\nfeature playother=1\nfeature san=0\nfeature usermove=1\nfeature time=1\nfeature draw=0\nfeature sigint=0\nfeature sigterm=0\nfeature reuse=1\nfeature analyze=0\nfeature myname=\"rocky $(Str.trim version)\"\nfeature variants=\"normal\"\nfeature colors=0\nfeature ics=0\nfeature name=0\nfeature pause=0\nfeature debug=1\nfeature done=1")
+    Ok (game, "feature ping=1\nfeature setboard=1\nfeature playother=1\nfeature san=0\nfeature usermove=1\nfeature time=1\nfeature draw=0\nfeature sigint=0\nfeature sigterm=0\nfeature reuse=1\nfeature analyze=0\nfeature myname=\"rocky $(Str.trim version)\"\nfeature variants=\"normal\"\nfeature colors=0\nfeature ics=0\nfeature name=0\nfeature pause=0\nfeature debug=1\nfeature done=1")
 
 rejectedCmd = \game, _args ->
     Ok (game, "")
@@ -136,8 +138,29 @@ expect
 resultCmd = \game, _args ->
     Ok (game, "")
 
+setBoardCmd = \game, args ->
+    FenParser.fromList args
+    |> Result.map \g -> ({ g & debug: game.debug, pretty: game.pretty }, "")
+
 timeCmd = \game, _args ->
     Ok (game, "")
+
+undoCmd = \game, _args ->
+    if List.len game.boardHistory >= 1 && game.forceMode == On then
+        move = Result.withDefault (List.last game.moveHistory) 0
+        gameAfterUnmake = Game.unmakeMove game
+        Ok (gameAfterUnmake, debug gameAfterUnmake "Undo move $(Move.toStr move)")
+    else
+        Err NotLegal
+
+expect
+    # Given
+    original = { initialGame & activeColor: Black, forceMode: On, moveNumber: 1, moveHistory: [0], boardHistory: [initialBoard] }
+    # When
+    actual = runTest undoCmd original []
+    # Then
+    expected = { original & activeColor: White, forceMode: On, moveNumber: 1, moveHistory: [], boardHistory: [] }
+    actual == expected
 
 usermoveCmd = \game, args ->
     when List.first args is
@@ -231,7 +254,9 @@ commands = Dict.fromList [
     ("rejected", rejectedCmd),
     ("remove", removeCmd),
     ("result", resultCmd),
+    ("setboard", setBoardCmd),
     ("time", timeCmd),
+    ("undo", undoCmd),
     ("usermove", usermoveCmd),
     ("xboard", xboardCmd),
 ]
@@ -243,12 +268,13 @@ commands = Dict.fromList [
 execute = \game, cmd, args ->
     when Dict.get commands cmd is
         Ok fun -> fun game args
-        _ -> Err (UnknownCommand cmd)
+        _ -> if MoveParser.isMove cmd then usermoveCmd game [cmd] else Err (UnknownCommand cmd)
 
 executeAndFormat = \game, cmd, args, text ->
     when execute game cmd args is
         Ok result -> (Ok (Step result.0), result.1)
         Err (IllegalMove msg) -> (Ok (Step game), "Illegal move: $(msg)")
+        Err IllegalPosition -> (Ok (Step game), "tellusererror Illegal position")
         Err SyntaxError -> (Ok (Step game), "Error (syntax error): $(text)")
         Err NotLegal -> (Ok (Step game), "Error (command not legal now): $(text)")
         Err (UnknownCommand msg) -> (Ok (Step game), "Error (unknown command): $(msg)")

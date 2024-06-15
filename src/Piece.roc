@@ -31,7 +31,7 @@ toStr : PieceIdx -> Str
 toStr = \piece ->
     when S.substr pieces { start: piece, len: 1 } is
         Ok s -> s
-        _ -> crash "Should not happen: unknown piece: $(Num.toStr piece)"
+        _ -> crash "Should not happen: unknown piece in toStr: $(Num.toStr piece)"
 
 expect toStr none == " "
 expect toStr bishop == "b"
@@ -54,7 +54,7 @@ toPrettyStr = \piece, color ->
         (4, Black) -> "♟︎"
         (5, Black) -> "♛"
         (6, Black) -> "♜"
-        _ -> crash "Should not happen: unknown piece: $(Num.toStr piece)"
+        _ -> crash "Should not happen: unknown piece in toPrettyStr: $(Num.toStr piece)"
 
 expect toPrettyStr knight White == "♘"
 expect toPrettyStr queen Black == "♛"
