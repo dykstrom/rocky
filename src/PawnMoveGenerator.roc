@@ -174,6 +174,12 @@ expect
     board = Util.withMoves initialBoard ["e2e4", "d7d5", "g1f3"] White
     moves = generateBlackMoves board board.white |> toStr
     Set.fromList moves == Set.fromList ["a7a5", "b7b5", "c7c5", "e7e5", "f7f5", "g7g5", "h7h5", "a7a6", "b7b6", "c7c6", "e7e6", "f7f6", "g7g6", "h7h6", "d5d4", "d5e4"]
+# After 1. e4 e5
+expect
+    board = Util.withMoves initialBoard ["e2e4", "e7e5"] White
+    # When calculating mobility score, we generate moves also for the side that just moved
+    moves = generateBlackMoves board board.white |> toStr
+    Set.fromList moves == Set.fromList ["a7a5", "b7b5", "c7c5", "d7d5", "f7f5", "g7g5", "h7h5", "a7a6", "b7b6", "c7c6", "d7d6", "f7f6", "g7g6", "h7h6"]
 
 ## Return true if the given square is on a normal rank, that is, not a promotion rank.
 isNormalRank : SquareIdx -> Bool
@@ -199,7 +205,8 @@ createWhiteEnPassantMoves : Board, Bitboard -> List Move
 createWhiteEnPassantMoves = \board, myPawns ->
     enPassantIdx = Board.enPassantSquare board
     pawnIdxs = Board.bbToIdxs myPawns
-    List.keepIf pawnIdxs (\idx -> enPassantIdx == idx + 7 || enPassantIdx == idx + 9)
+    # Pawn must start on fifth row to make an 'en passant' capture
+    List.keepIf pawnIdxs (\idx -> (enPassantIdx == idx + 7 || enPassantIdx == idx + 9) && idx // 8 == 4)
     |> List.map \fromIdx ->
         Move.createEnPassant fromIdx enPassantIdx
 
@@ -207,9 +214,19 @@ createBlackEnPassantMoves : Board, Bitboard -> List Move
 createBlackEnPassantMoves = \board, myPawns ->
     enPassantIdx = Board.enPassantSquare board
     pawnIdxs = Board.bbToIdxs myPawns
-    List.keepIf pawnIdxs (\idx -> enPassantIdx == idx - 7 || enPassantIdx == idx - 9)
+    # Pawn must start on fourth row to make an 'en passant' capture
+    List.keepIf pawnIdxs (\idx -> (enPassantIdx == idx - 7 || enPassantIdx == idx - 9) && idx // 8 == 3)
     |> List.map \fromIdx ->
         Move.createEnPassant fromIdx enPassantIdx
+
+expect
+    board = Util.withMoves initialBoard ["e2e4"] White
+    moves = createBlackEnPassantMoves board Square.d4 |> toStr
+    Set.fromList moves == Set.fromList ["d4e3"]
+expect
+    board = Util.withMoves initialBoard ["e2e4", "e7e5"] White
+    moves = createBlackEnPassantMoves board (bitwiseAnd board.pawn board.black) |> toStr
+    Set.fromList moves == Set.fromList []
 
 # ----------------------------------------------------------------------------
 # Helpers
