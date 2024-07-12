@@ -478,6 +478,7 @@ capturePiece : Board, SquareId, PieceIdx, Color -> Board
 capturePiece = \board, square, captured, color ->
     { board &
         bishop: if captured == Piece.bishop then bitwiseXor board.bishop square else board.bishop,
+        king: if captured == Piece.king then bitwiseXor board.king square else board.king,
         knight: if captured == Piece.knight then bitwiseXor board.knight square else board.knight,
         pawn: if captured == Piece.pawn then bitwiseXor board.pawn square else board.pawn,
         queen: if captured == Piece.queen then bitwiseXor board.queen square else board.queen,

@@ -1,0 +1,6 @@
+xboard
+protover 2
+accepted debug
+setboard 3r2N1/4P2p/2B1k1p1/5r2/pK6/2Pbp1PQ/1N1q4/2n1B2R w - - 0 1
+go
+quit

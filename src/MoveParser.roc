@@ -144,7 +144,7 @@ createAndTestMove = \board, sideToMove, fromIdx, toIdx, movedIdx, captured, prom
 testMove : Board, Color, Move -> Result Move [IllegalMove]
 testMove = \board, sideToMove, move ->
     boardAfterMove = Board.makeMove board move sideToMove
-    if Checker.isCheck boardAfterMove (Color.flipColor sideToMove) then
+    if Checker.isCheck boardAfterMove sideToMove then
         Err IllegalMove
     else
         Ok move
