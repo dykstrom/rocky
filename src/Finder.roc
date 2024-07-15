@@ -52,43 +52,53 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
         # if the side to move is in the lead
         { move: 0, score: -(Evaluator.evaluate board (Color.flipColor sideToMove)) }
     else
+        _ = dbgAlphaBeta depth sideToMove alpha beta
         # Depth > 0 -> generate moves and call alphaBeta recursively
         # Generate all pseudo legal moves
         moves = MoveGenerator.generateMoves board sideToMove
 
-        scoredMoves = List.map moves \move ->
-            # _ = if depth != 1 then dbgBeforeCall depth sideToMove move else 0
+        # Initialize best score to alpha
+        best = List.walkUntil moves { move: 0, score: alpha } \state, move ->
+            _ = if depth != 1 then dbgBeforeCall depth sideToMove move else 0
             newBoard = Board.makeMove board move sideToMove
             newBoardHistory = List.append boardHistory newBoard
 
             when isEndOfGamePosition newBoard newBoardHistory sideToMove is
                 Yes { score } ->
-                    { move: move, score: score }
+                    if score > state.score then Continue { move: 0, score: score } else Continue state
 
                 No ->
                     # Call recursively after flipping the side to move, and decreasing the depth
-                    { score } = alphaBeta newBoard newBoardHistory (Color.flipColor sideToMove) (depth - 1) -beta -alpha
-                    # _ = dbgAfterCall depth sideToMove move m -score
+                    # Use best score so far as alpha
+                    { score: s, move: m } = alphaBeta newBoard newBoardHistory (Color.flipColor sideToMove) (depth - 1) -beta -state.score
                     # The score returned from alphaBeta is the score for the best move
                     # for the side to move when calling alphaBeta, that is, not for our
                     # side. Thus we have to negate the score returned from alphaBeta.
-                    { move: move, score: -score }
+                    score = -s
+                    _ = dbgAfterCall depth sideToMove move m score
+                    if score > beta then
+                        # If the score is too good, we cut off the search tree here,
+                        # because the opponent will not select this branch
+                        _ = dbgBetaCutOff depth sideToMove move score beta
+                        Break { move, score: beta }
+                    else if score > state.score then
+                        # If this was the best move yet, save move and score in state as the new alpha
+                        Continue { move, score }
+                    else
+                        # Default case: not the best move yet
+                        Continue state
+        _ = dbgBestMove depth sideToMove best
 
-        # Sort them according to score
-        sortedMoves = List.sortWith scoredMoves compareByScore
-        # _ = dbgMoves depth sideToMove sortedMoves
-
-        # If the best move is illegalCheckValue we have been mated, or there is a draw
         # If there are no moves, and we are in check, we have been mated
         # If there are no moves, and we are not in check, it is a draw
-        when List.get sortedMoves 0 is
-            Ok { move, score } ->
-                if score == illegalCheckValue then
-                    mateOrStalemate board sideToMove
-                else
-                    { move, score }
-
-            Err OutOfBounds -> mateOrStalemate board sideToMove
+        # If the best move is illegalCheckValue, and we are in check, we have been mated
+        # If the best move is illegalCheckValue, and we are not in check, there is a draw
+        if List.len moves == 0 then
+            mateOrStalemate board sideToMove
+        else if best.score == illegalCheckValue then
+            mateOrStalemate board sideToMove
+        else
+            best
 
 ## Check if the current end-of-game position is a mate or stalemate.
 mateOrStalemate : Board, Color -> { move : Move, score : I64 }
@@ -196,8 +206,6 @@ expect
     { score, move } = alphaBeta board [] Black 3 -initialBeta -initialAlpha
     score > 0 && Move.toStr move == "a8a1"
 
-# TODO: Make use of alpha and beta to do cutoff.
-
 ## Check if the given board represents an end-of-game position, such as a forced draw.
 ## Return Yes with the score if true. Return No otherwise.
 isEndOfGamePosition : Board, List Board, Color -> [Yes { score : I64 }, No]
@@ -230,6 +238,7 @@ expect
     isEndOfGamePosition board [board, board, board] White == Yes { score: drawValue }
 
 ## Compare moves by their score. The move with the highest score will be sorted first.
+## Not used anymore. Remove?
 compareByScore : { move : Move, score : I64 }, { move : Move, score : I64 } -> [LT, EQ, GT]
 compareByScore = \m1, m2 ->
     if m1.score > m2.score then
@@ -247,21 +256,39 @@ expect compareByScore { move: 0, score: 3 } { move: 0, score: 5 } == GT
 # Helpers
 # ----------------------------------------------------------------------------
 
-# dbgBeforeCall = \depth, sideToMove, move ->
-#    m = "$(Num.toStr depth): Checking $(Inspect.toStr sideToMove) move $(Move.toStr move)"
-#    dbg m
+dbgBeforeCall = \depth, sideToMove, move ->
+    m = "$(Num.toStr depth): Checking $(Inspect.toStr sideToMove) move $(Move.toStr move)"
+    dbg m
 
-#    0
+    0
 
-# dbgAfterCall = \depth, sideToMove, myMove, theirMove, myScore ->
-#    m =
-#        if theirMove == 0 then
-#            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
-#        else
-#            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) then $(Inspect.toStr (Color.flipColor sideToMove)) plays $(Move.toStr theirMove) and the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
-#    dbg m
+dbgAfterCall = \depth, sideToMove, myMove, theirMove, myScore ->
+    m =
+        if theirMove == 0 then
+            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
+        else
+            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) then $(Inspect.toStr (Color.flipColor sideToMove)) plays $(Move.toStr theirMove) and the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
+    dbg m
 
-#    0
+    0
+
+dbgBestMove = \depth, sideToMove, { move, score } ->
+    m = "$(Num.toStr depth): Best move for $(Inspect.toStr sideToMove) is $(Move.toStr move) with score $(Num.toStr score)"
+    dbg m
+
+    0
+
+dbgAlphaBeta = \depth, sideToMove, alpha, beta ->
+    m = "$(Num.toStr depth): Side to move is $(Inspect.toStr sideToMove), alpha is $(Num.toStr alpha), beta is $(Num.toStr beta)"
+    dbg m
+
+    0
+
+dbgBetaCutOff = \depth, sideToMove, move, score, beta ->
+    m = "$(Num.toStr depth): Beta cut-off on $(Inspect.toStr sideToMove) move $(Move.toStr move) with score $(Num.toStr score) > beta $(Num.toStr beta)"
+    dbg m
+
+    0
 
 # dbgIsInCheck = \sideToMove ->
 #    m = "$(Inspect.toStr sideToMove) is in check!"
