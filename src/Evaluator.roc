@@ -31,28 +31,28 @@ evaluate = \board, color ->
     mobilityScore + checkScore + (if color == White then materialScore else -materialScore)
 
 # Initial position
-expect Evaluator.evaluate initialBoard White == 0
-expect Evaluator.evaluate initialBoard Black == 0
+expect evaluate initialBoard White == 0
+expect evaluate initialBoard Black == 0
 # Equal position
 expect
     board = Util.withMoves initialBoard ["e2e4", "e7e5"] White
-    Evaluator.evaluate board Black == 0
+    evaluate board Black == 0
 # White is a rook down
 expect
     board = { initialBoard &
         white: bitwiseXor initialBoard.white a1,
         rook: bitwiseXor initialBoard.rook a1,
     }
-    Evaluator.evaluate board White == -rookValue
+    evaluate board White == -rookValue
 # White is checked but not checkmated (he can escape to e2)
 expect
     board = Util.withMoves initialBoard ["f2f3", "e7e5", "e2e4", "d8h4"] White
-    score = Evaluator.evaluate board Black
+    score = evaluate board Black
     score > 0
 # White is checkmated, but we only know that White is checked
 expect
     board = Util.withMoves initialBoard ["f2f3", "e7e5", "g2g4", "d8h4"] White
-    Evaluator.evaluate board Black > 0
+    evaluate board Black > 0
 
 ## Return a small positive score if opponent is in check.
 evaluateCheck : Board, Color -> I64
@@ -81,18 +81,15 @@ evaluateMaterial = \board ->
 
 popCount : Bitboard -> I64
 popCount = \bitboard ->
-    iter = \bb, sum ->
-        if bb == 0 then
-            sum
-        else
-            iter (bitwiseAnd bb (bb - 1)) (sum + 1)
-    iter bitboard 0
+    Num.toI64 (Num.countOneBits bitboard)
 
-expect Evaluator.popCount 0 == 0
-expect Evaluator.popCount 1 == 1
-expect Evaluator.popCount 2 == 1
-expect Evaluator.popCount 3 == 2
-expect Evaluator.popCount 4 == 1
-expect Evaluator.popCount 7 == 3
-expect Evaluator.popCount h8 == 1
-expect Evaluator.popCount (L.or [a1, f5, h8]) == 3
+expect popCount 0 == 0
+expect popCount 1 == 1
+expect popCount 2 == 1
+expect popCount 3 == 2
+expect popCount 4 == 1
+expect popCount 7 == 3
+expect popCount h8 == 1
+expect popCount (L.or [a1, f5, h8]) == 3
+expect popCount initialBoard.white == 16
+expect popCount initialBoard.bishop == 4

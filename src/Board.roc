@@ -7,7 +7,7 @@ import Move exposing [Move, e1g1, e2e4, e7e5, f1c4, f3g1, f6g8, f8c5, g7g5, h2h4
 import Num exposing [bitwiseAnd, bitwiseNot, bitwiseOr, bitwiseXor, shiftLeftBy, shiftRightZfBy]
 import Piece exposing [PieceIdx]
 import S
-import Square exposing [SquareId, SquareIdx, a1, b1, c1, d1, e1, f1, g1, h1, a2, b2, c2, d2, e2, f2, g2, h2, e4, g5, g6, a7, b7, c7, d7, e7, f7, g7, h7, a8, b8, c8, d8, e8, f8, g8, h8, b1Idx, b8Idx, c1Idx, c8Idx, d5Idx, d6Idx, d7Idx, e1Idx, e3Idx, e8Idx, g1Idx, g6Idx, g8Idx]
+import Square exposing [SquareId, SquareIdx, a1, b1, c1, d1, e1, f1, g1, h1, a2, b2, c2, d2, e2, f2, g2, h2, e4, g5, g6, a7, b7, c7, d7, e7, f7, g7, h7, a8, b8, c8, d8, e8, f8, g8, h8, a1Idx, b1Idx, b8Idx, c1Idx, c8Idx, d1Idx, d5Idx, d6Idx, d7Idx, e1Idx, e3Idx, e8Idx, f1Idx, g1Idx, g6Idx, g8Idx, h1Idx, a2Idx, b2Idx, c2Idx, d2Idx, e2Idx, f2Idx, g2Idx, h2Idx]
 
 Bitboard : U64
 
@@ -559,15 +559,16 @@ expect bbToStr initialBoard.white == "\n00000000\n00000000\n00000000\n00000000\n
 ## Return a list of square indices: one index for each square that is occupied in the given bitboard.
 bbToIdxs : Bitboard -> List SquareIdx
 bbToIdxs = \bitboard ->
-    iter = \bb, index, list ->
-        if bb == 0 then
+    iter = \b, list ->
+        if b == 0 then
             list
-        else if bitwiseAnd bb 1 != 0 then
-            iter (shiftRightZfBy bb 1) (index + 1) (List.append list index)
         else
-            iter (shiftRightZfBy bb 1) (index + 1) list
-    iter bitboard 0 []
+            idx = Num.countTrailingZeroBits b
+            next = bitwiseAnd b (bitwiseNot (shiftLeftBy 1u64 idx))
+            iter next (List.append list (Num.toU64 idx))
+    iter bitboard (List.withCapacity 64)
 
 expect bbToIdxs 0 == []
 expect bbToIdxs initialBoard.knight == [b1Idx, g1Idx, b8Idx, g8Idx]
 expect bbToIdxs initialBoard.king == [e1Idx, e8Idx]
+expect bbToIdxs initialBoard.white == [a1Idx, b1Idx, c1Idx, d1Idx, e1Idx, f1Idx, g1Idx, h1Idx, a2Idx, b2Idx, c2Idx, d2Idx, e2Idx, f2Idx, g2Idx, h2Idx]
