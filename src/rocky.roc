@@ -50,16 +50,7 @@ expect
     # When
     actual = runTest goCmd original []
     # Then
-    actual.forceMode
-    == Off
-    && actual.activeColor
-    == Black
-    && actual.engineColor
-    == White
-    && actual.moveNumber
-    == 1
-    && List.len actual.moveHistory
-    == 1
+    actual.forceMode == Off && actual.activeColor == Black && actual.engineColor == White && actual.moveNumber == 1 && List.len actual.moveHistory == 1
 
 helpText =
     """
@@ -210,14 +201,7 @@ expect
     # When
     actual = runTest usermoveCmd original ["e2e4"]
     # Then
-    actual.forceMode
-    == On
-    && actual.activeColor
-    == Black
-    && actual.moveNumber
-    == 1
-    && List.len actual.moveHistory
-    == 1
+    actual.forceMode == On && actual.activeColor == Black && actual.moveNumber == 1 && List.len actual.moveHistory == 1
 
 # Force move Off
 expect
@@ -226,14 +210,7 @@ expect
     # When
     actual = runTest usermoveCmd original ["e2e4"]
     # Then
-    actual.forceMode
-    == Off
-    && actual.activeColor
-    == White
-    && actual.moveNumber
-    == 2
-    && List.len actual.moveHistory
-    == 2
+    actual.forceMode == Off && actual.activeColor == White && actual.moveNumber == 2 && List.len actual.moveHistory == 2
 
 xboardCmd = \game, _args ->
     Ok (game, "")

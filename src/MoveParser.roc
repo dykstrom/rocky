@@ -4,6 +4,7 @@ import Board exposing [Board, initialBoard]
 import Checker
 import Color exposing [Color]
 import Move exposing [Move]
+import MoveGenerator
 import Num exposing [bitwiseXor]
 import Piece exposing [PieceIdx]
 import S
@@ -144,7 +145,8 @@ createAndTestMove = \board, sideToMove, fromIdx, toIdx, movedIdx, captured, prom
 testMove : Board, Color, Move -> Result Move [IllegalMove]
 testMove = \board, sideToMove, move ->
     boardAfterMove = Board.makeMove board move sideToMove
-    if Checker.isCheck boardAfterMove sideToMove then
+    boardWithMoves = MoveGenerator.withMoves boardAfterMove
+    if Checker.isCheck boardWithMoves sideToMove then
         Err IllegalMove
     else
         Ok move

@@ -25,45 +25,53 @@ drawValue = 0
 ## The score will be positive if the given color is in the lead.
 evaluate : Board, Color -> I64
 evaluate = \board, color ->
-    mobilityScore = evaluateMobility board color
+    mobilityScore = evaluateMobility board
     checkScore = evaluateCheck board color
     materialScore = evaluateMaterial board
-    mobilityScore + checkScore + (if color == White then materialScore else -materialScore)
+    (if color == White then mobilityScore else -mobilityScore)
+    + checkScore
+    + (if color == White then materialScore else -materialScore)
 
 # Initial position
-expect evaluate initialBoard White == 0
-expect evaluate initialBoard Black == 0
+expect
+    boardWithMoves = MoveGenerator.withMoves initialBoard
+    evaluate boardWithMoves White == 0
+expect
+    boardWithMoves = MoveGenerator.withMoves initialBoard
+    evaluate boardWithMoves Black == 0
 # Equal position
 expect
     board = Util.withMoves initialBoard ["e2e4", "e7e5"] White
-    evaluate board Black == 0
+    boardWithMoves = MoveGenerator.withMoves board
+    evaluate boardWithMoves Black == 0
 # White is a rook down
 expect
     board = { initialBoard &
         white: bitwiseXor initialBoard.white a1,
         rook: bitwiseXor initialBoard.rook a1,
     }
-    evaluate board White == -rookValue
+    boardWithMoves = MoveGenerator.withMoves board
+    evaluate boardWithMoves White == -rookValue
 # White is checked but not checkmated (he can escape to e2)
 expect
     board = Util.withMoves initialBoard ["f2f3", "e7e5", "e2e4", "d8h4"] White
-    score = evaluate board Black
-    score > 0
+    boardWithMoves = MoveGenerator.withMoves board
+    evaluate boardWithMoves Black > 0
 # White is checkmated, but we only know that White is checked
 expect
     board = Util.withMoves initialBoard ["f2f3", "e7e5", "g2g4", "d8h4"] White
-    evaluate board Black > 0
+    boardWithMoves = MoveGenerator.withMoves board
+    evaluate boardWithMoves Black > 0
 
 ## Return a small positive score if opponent is in check.
 evaluateCheck : Board, Color -> I64
 evaluateCheck = \board, color ->
     if Checker.isCheck board (Color.flipColor color) then checkValue else 0
 
-evaluateMobility : Board, Color -> I64
-evaluateMobility = \board, color ->
-    myMoves = MoveGenerator.generateMoves board color
-    theirMoves = MoveGenerator.generateMoves board (Color.flipColor color)
-    (Num.toI64 (List.len myMoves) - Num.toI64 (List.len theirMoves)) * mobilityValue
+## Evaluate mobility. The score will be positive if White is in the lead.
+evaluateMobility : Board -> I64
+evaluateMobility = \board ->
+    (Num.toI64 (List.len board.whiteMoves) - Num.toI64 (List.len board.blackMoves)) * mobilityValue
 
 ## Evaluate material on the board. The score will be positive if White is in the lead.
 evaluateMaterial : Board -> I64

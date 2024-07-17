@@ -12,18 +12,29 @@ import Util
 ## and testing if any move captures the king.
 isCheck : Board, Color -> Bool
 isCheck = \board, color ->
-    MoveGenerator.generateMoves board (Color.flipColor color)
-    |> List.any \move ->
+    expect
+        board.whiteMoves != []
+
+    expect
+        board.blackMoves != []
+
+    moves = if color == White then board.blackMoves else board.whiteMoves
+    List.any moves \move ->
         Move.getCaptured move == Piece.king
 
 # Initial position, white
-expect isCheck initialBoard White == Bool.false
+expect
+    boardWithMoves = MoveGenerator.withMoves initialBoard
+    isCheck boardWithMoves White == Bool.false
 # Initial position, black
-expect isCheck initialBoard Black == Bool.false
+expect
+    boardWithMoves = MoveGenerator.withMoves initialBoard
+    isCheck boardWithMoves Black == Bool.false
 # After 1. Nc3 a6 2. Nd5 b6 3. Nf6+, black is checked
 expect
     board = Util.withMoves initialBoard ["b1c3", "a7a6", "c3d5", "b7b6", "d5f6"] White
-    isCheck board Black == Bool.true
+    boardWithMoves = MoveGenerator.withMoves board
+    isCheck boardWithMoves Black == Bool.true
 
 isDrawBy50MoveRule : Board -> Bool
 isDrawBy50MoveRule = \board ->
@@ -36,7 +47,7 @@ expect
 
 isDrawByThreefoldRepetition : Board, List Board -> Bool
 isDrawByThreefoldRepetition = \board, boardHistory ->
-    (List.countIf boardHistory \b -> Board.equalsIgnoreFlags b board) >= 3
+    (List.countIf boardHistory \b -> Board.equalsPieces b board) >= 3
 
 expect isDrawByThreefoldRepetition initialBoard [] == Bool.false
 expect isDrawByThreefoldRepetition initialBoard [initialBoard, initialBoard, initialBoard] == Bool.true

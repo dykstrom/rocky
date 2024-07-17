@@ -18,7 +18,9 @@ initialBeta = 3_000_000
 ## positive if the side to move is in the lead.
 findMove : Board, List Board, Color -> [Draw, Mated, FoundMove { move : Move, score : I64 }]
 findMove = \board, boardHistory, sideToMove ->
-    { move, score } = alphaBeta board boardHistory sideToMove 3 -initialBeta -initialAlpha
+    # Decorate the initial board with the possible moves
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves boardHistory sideToMove 3 -initialBeta -initialAlpha
     if move == 0 then
         if Checker.isCheck board sideToMove then Mated else Draw
     else
@@ -52,15 +54,15 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
         # if the side to move is in the lead
         { move: 0, score: -(Evaluator.evaluate board (Color.flipColor sideToMove)) }
     else
-        _ = dbgAlphaBeta depth sideToMove alpha beta
+        # _ = dbgAlphaBeta depth sideToMove alpha beta
         # Depth > 0 -> generate moves and call alphaBeta recursively
         # Generate all pseudo legal moves
-        moves = MoveGenerator.generateMoves board sideToMove
+        moves = if sideToMove == White then board.whiteMoves else board.blackMoves
 
         # Initialize best score to alpha
         best = List.walkUntil moves { move: 0, score: alpha } \state, move ->
-            _ = if depth != 1 then dbgBeforeCall depth sideToMove move else 0
-            newBoard = Board.makeMove board move sideToMove
+            # _ = if depth != 1 then dbgBeforeCall depth sideToMove move else 0
+            newBoard = makeMove board move sideToMove
             newBoardHistory = List.append boardHistory newBoard
 
             when isEndOfGamePosition newBoard newBoardHistory sideToMove is
@@ -75,11 +77,11 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
                     # for the side to move when calling alphaBeta, that is, not for our
                     # side. Thus we have to negate the score returned from alphaBeta.
                     score = -s
-                    _ = dbgAfterCall depth sideToMove move m score
+                    # _ = dbgAfterCall depth sideToMove move m score
                     if score > beta then
                         # If the score is too good, we cut off the search tree here,
                         # because the opponent will not select this branch
-                        _ = dbgBetaCutOff depth sideToMove move score beta
+                        # _ = dbgBetaCutOff depth sideToMove move score beta
                         Break { move, score: beta }
                     else if score > state.score then
                         # If this was the best move yet, save move and score in state as the new alpha
@@ -87,7 +89,7 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
                     else
                         # Default case: not the best move yet
                         Continue state
-        _ = dbgBestMove depth sideToMove best
+        # _ = dbgBestMove depth sideToMove best
 
         # If there are no moves, and we are in check, we have been mated
         # If there are no moves, and we are not in check, it is a draw
@@ -112,98 +114,116 @@ mateOrStalemate = \board, sideToMove ->
 
 # Depth 0
 expect
-    { board, history } = Util.withHistory initialBoard ["e2e4", "d7d5", "e4d5"] White
-    { score } = alphaBeta board history Black 0 -initialBeta -initialAlpha
+    board = Util.withMoves initialBoard ["e2e4", "d7d5", "e4d5"] White
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves [] Black 0 -initialBeta -initialAlpha
     # Black is a pawn down (just evaluation since depth is 0)
     score < 0
 expect
     board = FenParser.fenToBoard Fen.foolsMate
-    { score } = alphaBeta board [] White 0 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves [] White 0 -initialBeta -initialAlpha
     # White is mated, but we only know that he is checked
     score < 0
 expect
     board = FenParser.fenToBoard Fen.scholarsMate
-    { score } = alphaBeta board [] Black 0 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves [] Black 0 -initialBeta -initialAlpha
     # Black is mated, but we only know he is checked
     score < 0
 
 # Depth 1
 expect
     { board, history } = Util.withHistory initialBoard ["e2e4"] White
-    { score } = alphaBeta board history Black 1 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves history Black 1 -initialBeta -initialAlpha
     # Score should be equal after e.g. 1. e4 e5
     score == 0
 expect
     { board, history } = Util.withHistory initialBoard ["e2e4", "d7d5"] White
-    { score } = alphaBeta board history White 1 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves history White 1 -initialBeta -initialAlpha
     # White is a pawn up after 2. exd5
     score >= 1_000
 expect
     { board, history } = Util.withHistory initialBoard ["d2d4", "e7e5"] White
-    { score } = alphaBeta board history White 1 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves history White 1 -initialBeta -initialAlpha
     # White is a pawn up after 2. dxe5
     score >= 1_000
 expect
     board = FenParser.fenToBoard Fen.foolsMateInOne
-    { score } = alphaBeta board [] Black 1 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves [] Black 1 -initialBeta -initialAlpha
     # White is mated after 2... Qh4#
     # We don't know that, because evaluate does not test for checkmate
     # But we know White is checked, which gives a positive score for Black
     score > 0
 expect
     board = FenParser.fenToBoard Fen.drawByStaleMate
-    { score } = alphaBeta board [] Black 1 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves [] Black 1 -initialBeta -initialAlpha
     score == 0
 
 # Depth 2
 expect
     { board, history } = Util.withHistory initialBoard ["e2e4", "d7d5"] White
-    { move, score } = alphaBeta board history White 2 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves history White 2 -initialBeta -initialAlpha
     # White is not a pawn up after 2. exd5 because black recaptures 2... Qxd5
     # Therefore White chooses another move that increases mobility
     score > 0 && Move.toStr move != "e4d5"
 expect
     { board, history } = Util.withHistory initialBoard ["d2d4", "e7e5"] White
-    { move, score } = alphaBeta board history White 2 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves history White 2 -initialBeta -initialAlpha
     # White is a pawn up after 2. dxe5
     score > 0 && Move.toStr move == "d4e5"
 expect
     board = FenParser.fenToBoard Fen.foolsMateInOne
-    { move, score } = alphaBeta board [] Black 2 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves [] Black 2 -initialBeta -initialAlpha
     # White is mated after 2... Qh4#
     score == checkmateValue && Move.toStr move == "d8h4"
 
 # Depth 3
 expect
     board = FenParser.fenToBoard Fen.foolsMateInOne
-    { move, score } = alphaBeta board [] Black 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves [] Black 3 -initialBeta -initialAlpha
     # White is mated
     score == checkmateValue && Move.toStr move == "d8h4"
 expect
     board = FenParser.fenToBoard Fen.scholarsMateInOne
-    { move, score } = alphaBeta board [] White 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves [] White 3 -initialBeta -initialAlpha
     # Black is mated
     score == checkmateValue && Move.toStr move == "h5f7"
 expect
     board = FenParser.fenToBoard Fen.drawBy50MoveRuleInOne
-    { move, score } = alphaBeta board [] White 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { move, score } = alphaBeta boardWithMoves [] White 3 -initialBeta -initialAlpha
     # White is up by a rook after e6e7, which is the only move not resulting in a forced draw
     score > 0 && Move.toStr move == "e6e7"
 expect
     board = FenParser.fenToBoard Fen.drawByStaleMate
-    { score } = alphaBeta board [] Black 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score } = alphaBeta boardWithMoves [] Black 3 -initialBeta -initialAlpha
     score == 0
 expect
     board = FenParser.fenToBoard Fen.drawByStaleMateInOne
-    { score, move } = alphaBeta board [] White 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score, move } = alphaBeta boardWithMoves [] White 3 -initialBeta -initialAlpha
     score > 0 && Move.toStr move != "a1b1"
 expect
     board = FenParser.fenToBoard Fen.drawByStaleMateIsBest
-    { score, move } = alphaBeta board [] White 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score, move } = alphaBeta boardWithMoves [] White 3 -initialBeta -initialAlpha
     score == 0 && Move.toStr move == "a2b2"
 expect
     board = FenParser.fenToBoard Fen.backRankMateInThree
-    { score, move } = alphaBeta board [] Black 3 -initialBeta -initialAlpha
+    boardWithMoves = MoveGenerator.withMoves board
+    { score, move } = alphaBeta boardWithMoves [] Black 3 -initialBeta -initialAlpha
     score > 0 && Move.toStr move == "a8a1"
 
 ## Check if the given board represents an end-of-game position, such as a forced draw.
@@ -224,18 +244,22 @@ isEndOfGamePosition = \board, boardHistory, sideToMove ->
 
 expect
     board = FenParser.fenToBoard Fen.initialGame
-    isEndOfGamePosition board [] White == No
+    boardWithMoves = MoveGenerator.withMoves board
+    isEndOfGamePosition boardWithMoves [] White == No
 expect
     board = FenParser.fenToBoard Fen.scholarsMate
-    isEndOfGamePosition board [] Black == Yes { score: illegalCheckValue }
+    boardWithMoves = MoveGenerator.withMoves board
+    isEndOfGamePosition boardWithMoves [] Black == Yes { score: illegalCheckValue }
 expect
     board =
         FenParser.fenToBoard Fen.initialGame
         |> \b -> { b & flags: 100 }
-    isEndOfGamePosition board [] White == Yes { score: drawValue }
+    boardWithMoves = MoveGenerator.withMoves board
+    isEndOfGamePosition boardWithMoves [] White == Yes { score: drawValue }
 expect
     board = FenParser.fenToBoard Fen.initialGame
-    isEndOfGamePosition board [board, board, board] White == Yes { score: drawValue }
+    boardWithMoves = MoveGenerator.withMoves board
+    isEndOfGamePosition boardWithMoves [board, board, board] White == Yes { score: drawValue }
 
 ## Compare moves by their score. The move with the highest score will be sorted first.
 ## Not used anymore. Remove?
@@ -252,52 +276,47 @@ expect compareByScore { move: 0, score: 7 } { move: 0, score: 5 } == LT
 expect compareByScore { move: 0, score: 5 } { move: 0, score: 5 } == EQ
 expect compareByScore { move: 0, score: 3 } { move: 0, score: 5 } == GT
 
+## Make the given move, and decorate the resulting board
+## with the possible moves on that board.
+makeMove : Board, Move, Color -> Board
+makeMove = \board, move, sideToMove ->
+    newBoard = Board.makeMove board move sideToMove
+    MoveGenerator.withMoves newBoard
+
 # ----------------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------------
 
-dbgBeforeCall = \depth, sideToMove, move ->
-    m = "$(Num.toStr depth): Checking $(Inspect.toStr sideToMove) move $(Move.toStr move)"
-    dbg m
-
-    0
-
-dbgAfterCall = \depth, sideToMove, myMove, theirMove, myScore ->
-    m =
-        if theirMove == 0 then
-            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
-        else
-            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) then $(Inspect.toStr (Color.flipColor sideToMove)) plays $(Move.toStr theirMove) and the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
-    dbg m
-
-    0
-
-dbgBestMove = \depth, sideToMove, { move, score } ->
-    m = "$(Num.toStr depth): Best move for $(Inspect.toStr sideToMove) is $(Move.toStr move) with score $(Num.toStr score)"
-    dbg m
-
-    0
-
-dbgAlphaBeta = \depth, sideToMove, alpha, beta ->
-    m = "$(Num.toStr depth): Side to move is $(Inspect.toStr sideToMove), alpha is $(Num.toStr alpha), beta is $(Num.toStr beta)"
-    dbg m
-
-    0
-
-dbgBetaCutOff = \depth, sideToMove, move, score, beta ->
-    m = "$(Num.toStr depth): Beta cut-off on $(Inspect.toStr sideToMove) move $(Move.toStr move) with score $(Num.toStr score) > beta $(Num.toStr beta)"
-    dbg m
-
-    0
-
-# dbgIsInCheck = \sideToMove ->
-#    m = "$(Inspect.toStr sideToMove) is in check!"
+# dbgBeforeCall = \depth, sideToMove, move ->
+#    m = "$(Num.toStr depth): Checking $(Inspect.toStr sideToMove) move $(Move.toStr move)"
 #    dbg m
 
 #    0
 
-# dbgIsDraw = \_sideToMove ->
-#    m = "It is forced draw!"
+# dbgAfterCall = \depth, sideToMove, myMove, theirMove, myScore ->
+#    m =
+#        if theirMove == 0 then
+#            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
+#        else
+#            "$(Num.toStr depth): If $(Inspect.toStr sideToMove) plays $(Move.toStr myMove) then $(Inspect.toStr (Color.flipColor sideToMove)) plays $(Move.toStr theirMove) and the score for $(Inspect.toStr sideToMove) is $(Num.toStr myScore)"
+#    dbg m
+
+#    0
+
+# dbgBestMove = \depth, sideToMove, { move, score } ->
+#    m = "$(Num.toStr depth): Best move for $(Inspect.toStr sideToMove) is $(Move.toStr move) with score $(Num.toStr score)"
+#    dbg m
+
+#    0
+
+# dbgAlphaBeta = \depth, sideToMove, alpha, beta ->
+#    m = "$(Num.toStr depth): Side to move is $(Inspect.toStr sideToMove), alpha is $(Num.toStr alpha), beta is $(Num.toStr beta)"
+#    dbg m
+
+#    0
+
+# dbgBetaCutOff = \depth, sideToMove, move, score, beta ->
+#    m = "$(Num.toStr depth): Beta cut-off on $(Inspect.toStr sideToMove) move $(Move.toStr move) with score $(Num.toStr score) > beta $(Num.toStr beta)"
 #    dbg m
 
 #    0

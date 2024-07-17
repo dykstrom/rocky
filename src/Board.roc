@@ -1,4 +1,4 @@
-module [Bitboard, Board, emptyBoard, initialBoard, makeMove, colorAt, pieceAt, isLegal, isCastlingAllowed, withCastlingRights, isEnPassantAllowed, enPassantSquare, withEnPassantSquare, halfMoveClock, withHalfMoveClock, equalsIgnoreFlags, toStr, toPrettyStr, withMoves, bbToStr, bbToIdxs]
+module [Bitboard, Board, emptyBoard, initialBoard, makeMove, colorAt, pieceAt, isLegal, isCastlingAllowed, withCastlingRights, isEnPassantAllowed, enPassantSquare, withEnPassantSquare, halfMoveClock, withHalfMoveClock, equalsPieces, toStr, toPrettyStr, withMoves, bbToStr, bbToIdxs]
 
 import Ansi
 import Color exposing [Color]
@@ -21,6 +21,8 @@ Board : {
     pawn : Bitboard,
     rook : Bitboard,
     flags : U64,
+    whiteMoves : List Move,
+    blackMoves : List Move,
 }
 
 squareMask = 0x3fu64
@@ -53,6 +55,8 @@ emptyBoard = {
     pawn: 0,
     rook: 0,
     flags: 0,
+    whiteMoves: [],
+    blackMoves: [],
 }
 
 initialBoard = {
@@ -65,6 +69,8 @@ initialBoard = {
     pawn: L.or [a2, b2, c2, d2, e2, f2, g2, h2, a7, b7, c7, d7, e7, f7, g7, h7],
     rook: L.or [a1, h1, a8, h8],
     flags: L.or [wksCastlingMask, wqsCastlingMask, bksCastlingMask, bqsCastlingMask],
+    whiteMoves: [],
+    blackMoves: [],
 }
 
 expect bitwiseAnd initialBoard.rook a1 != 0
@@ -170,9 +176,9 @@ expect
     board = { initialBoard & flags: initialBoard.flags + 53 }
     halfMoveClock board == 53
 
-## Return true if the two boards are equal if the flags field is ignored.
-equalsIgnoreFlags : Board, Board -> Bool
-equalsIgnoreFlags = \board1, board2 ->
+## Return true if the two boards are equal if only the pieces are considered.
+equalsPieces : Board, Board -> Bool
+equalsPieces = \board1, board2 ->
     (board1.white == board2.white)
     && (board1.black == board2.black)
     && (board1.bishop == board2.bishop)
@@ -186,7 +192,7 @@ expect
     board = withMoves initialBoard [ng1f3, ng8f6, f3g1, f6g8] White
     (board != initialBoard)
     &&
-    (equalsIgnoreFlags board initialBoard == Bool.true)
+    (equalsPieces board initialBoard == Bool.true)
 
 toStr : Board -> Str
 toStr = \board ->
