@@ -58,9 +58,11 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
         # Depth > 0 -> generate moves and call alphaBeta recursively
         # Generate all pseudo legal moves
         moves = if sideToMove == White then board.whiteMoves else board.blackMoves
+        # Sort moves by their potential to make the alpha-beta algorithm more efficient
+        sortedMoves = if depth >= 3 then List.sortWith moves compareByPotential else moves
 
         # Initialize best score to alpha
-        best = List.walkUntil moves { move: 0, score: alpha } \state, move ->
+        best = List.walkUntil sortedMoves { move: 0, score: alpha } \state, move ->
             # _ = if depth != 1 then dbgBeforeCall depth sideToMove move else 0
             newBoard = makeMove board move sideToMove
             newBoardHistory = List.append boardHistory newBoard
@@ -72,7 +74,7 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
                 No ->
                     # Call recursively after flipping the side to move, and decreasing the depth
                     # Use best score so far as alpha
-                    { score: s, move: m } = alphaBeta newBoard newBoardHistory (Color.flipColor sideToMove) (depth - 1) -beta -state.score
+                    { score: s } = alphaBeta newBoard newBoardHistory (Color.flipColor sideToMove) (depth - 1) -beta -state.score
                     # The score returned from alphaBeta is the score for the best move
                     # for the side to move when calling alphaBeta, that is, not for our
                     # side. Thus we have to negate the score returned from alphaBeta.
@@ -85,7 +87,11 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
                         Break { move, score: beta }
                     else if score > state.score then
                         # If this was the best move yet, save move and score in state as the new alpha
-                        Continue { move, score }
+                        if score == checkmateValue then
+                            # If the best move is checkmate we don't have to look further
+                            Break { move, score }
+                        else
+                            Continue { move, score }
                     else
                         # Default case: not the best move yet
                         Continue state
@@ -276,6 +282,18 @@ expect compareByScore { move: 0, score: 7 } { move: 0, score: 5 } == LT
 expect compareByScore { move: 0, score: 5 } { move: 0, score: 5 } == EQ
 expect compareByScore { move: 0, score: 3 } { move: 0, score: 5 } == GT
 
+## Compare by potential. Because of how the bits in a Move are organized,
+## captures will be sorted before promotions that will be sorted before
+## ordinary moves.
+compareByPotential : Move, Move -> [LT, EQ, GT]
+compareByPotential = \m1, m2 ->
+    if m1 > m2 then
+        LT
+    else if m2 > m1 then
+        GT
+    else
+        EQ
+
 ## Make the given move, and decorate the resulting board
 ## with the possible moves on that board.
 makeMove : Board, Move, Color -> Board
@@ -317,16 +335,6 @@ makeMove = \board, move, sideToMove ->
 
 # dbgBetaCutOff = \depth, sideToMove, move, score, beta ->
 #    m = "$(Num.toStr depth): Beta cut-off on $(Inspect.toStr sideToMove) move $(Move.toStr move) with score $(Num.toStr score) > beta $(Num.toStr beta)"
-#    dbg m
-
-#    0
-
-# dbgMoves = \depth, sideToMove, list ->
-#    moves =
-#        List.sublist list { start: 0, len: 3 }
-#        |> List.map \{ move, score } ->
-#            { move: Move.toStr move, score: score }
-#    m = "$(Num.toStr depth): Best moves for $(Inspect.toStr sideToMove) are $(Inspect.toStr moves)"
 #    dbg m
 
 #    0
