@@ -131,13 +131,13 @@ expect isLegal emptyBoard == Bool.false
 isCastlingAllowed : Board, SquareIdx, SquareIdx -> Bool
 isCastlingAllowed = \board, fromIdx, toIdx ->
     if fromIdx == e1Idx && toIdx == c1Idx then
-        pieceAt board a1 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) b1c1d1) == 0 && bitwiseAnd board.flags wqsCastlingMask != 0
+        ica board e1 a1 b1c1d1 wqsCastlingMask
     else if fromIdx == e1Idx && toIdx == g1Idx then
-        pieceAt board h1 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) f1g1) == 0 && bitwiseAnd board.flags wksCastlingMask != 0
+        ica board e1 h1 f1g1 wksCastlingMask
     else if fromIdx == e8Idx && toIdx == c8Idx then
-        pieceAt board a8 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) b8c8d8) == 0 && bitwiseAnd board.flags bqsCastlingMask != 0
+        ica board e8 a8 b8c8d8 bqsCastlingMask
     else if fromIdx == e8Idx && toIdx == g8Idx then
-        pieceAt board h8 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) f8g8) == 0 && bitwiseAnd board.flags bksCastlingMask != 0
+        ica board e8 h8 f8g8 bksCastlingMask
     else
         Bool.false
 
@@ -145,6 +145,13 @@ expect isCastlingAllowed initialBoard e1Idx c1Idx == Bool.false
 expect isCastlingAllowed initialBoard e1Idx g1Idx == Bool.false
 expect isCastlingAllowed initialBoard e8Idx c8Idx == Bool.false
 expect isCastlingAllowed initialBoard e8Idx g8Idx == Bool.false
+
+ica : Board, SquareId, SquareId, Bitboard, U64 -> Bool
+ica = \board, kingSquare, rookSquare, blockingSquares, castlingMask ->
+    (pieceAt board rookSquare == Piece.rook)
+    && (colorAt board kingSquare == colorAt board rookSquare)
+    && ((bitwiseAnd (bitwiseOr board.white board.black) blockingSquares) == 0)
+    && (bitwiseAnd board.flags castlingMask != 0)
 
 isEnPassantAllowed : Board -> Bool
 isEnPassantAllowed = \board ->

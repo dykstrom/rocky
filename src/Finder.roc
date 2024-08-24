@@ -22,7 +22,7 @@ findMove = \board, boardHistory, sideToMove ->
     boardWithMoves = MoveGenerator.withMoves board
     { move, score } = alphaBeta boardWithMoves boardHistory sideToMove 3 -initialBeta -initialAlpha
     if move == 0 then
-        if Checker.isCheck board sideToMove then Mated else Draw
+        if Checker.isCheck boardWithMoves sideToMove then Mated else Draw
     else
         FoundMove { move, score }
 
@@ -38,6 +38,25 @@ expect
     when findMove board [] Black is
         FoundMove { move } -> Move.toStr move == "d8h4"
         _ -> Bool.false
+# Black has only one legal move
+expect
+    board = FenParser.fenToBoard Fen.mateInTwo
+    when findMove board [] Black is
+        FoundMove { move } -> Move.toStr move == "e7d8"
+        _ -> Bool.false
+# White cannot castle king-side
+expect
+    board = FenParser.fenToBoard Fen.whiteCannotCastle
+    when findMove board [] White is
+        FoundMove { move } -> Move.toStr move != "e1g1"
+        _ -> Bool.false
+# Black has already been checkmated
+expect
+    board = FenParser.fenToBoard Fen.blackIsCheckMated
+    when findMove board [] Black is
+        FoundMove _ -> Bool.false
+        Mated -> Bool.true
+        Draw -> Bool.false
 
 ## Return the best move (and score) for the side to move. The best move is the
 ## move with the highest score for the side to move. It will be positive if the
@@ -85,7 +104,7 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
                         # because the opponent will not select this branch
                         # _ = dbgBetaCutOff depth sideToMove move score beta
                         Break { move, score: beta }
-                    else if score > state.score then
+                    else if score > state.score || (score == state.score && state.move == 0) then
                         # If this was the best move yet, save move and score in state as the new alpha
                         if score == checkmateValue then
                             # If the best move is checkmate we don't have to look further
@@ -99,11 +118,11 @@ alphaBeta = \board, boardHistory, sideToMove, depth, alpha, beta ->
 
         # If there are no moves, and we are in check, we have been mated
         # If there are no moves, and we are not in check, it is a draw
-        # If the best move is illegalCheckValue, and we are in check, we have been mated
-        # If the best move is illegalCheckValue, and we are not in check, there is a draw
+        # If we found no legal move, and we are in check, we have been mated
+        # If we found no legal move, and we are not in check, there is a draw
         if List.len moves == 0 then
             mateOrStalemate board sideToMove
-        else if best.score == illegalCheckValue then
+        else if best.move == 0 then
             mateOrStalemate board sideToMove
         else
             best
