@@ -1,4 +1,4 @@
-module [Bitboard, Board, emptyBoard, initialBoard, makeMove, colorAt, pieceAt, isLegal, isCastlingAllowed, withCastlingRights, isEnPassantAllowed, enPassantSquare, withEnPassantSquare, halfMoveClock, withHalfMoveClock, equalsIgnoreFlags, toStr, toPrettyStr, withMoves, bbToStr, bbToIdxs]
+module [Bitboard, Board, emptyBoard, initialBoard, makeMove, colorAt, pieceAt, isLegal, isCastlingAllowed, withCastlingRights, isEnPassantAllowed, enPassantSquare, withEnPassantSquare, halfMoveClock, withHalfMoveClock, equalsPieces, toStr, toPrettyStr, withMoves, bbToStr, bbToIdxs]
 
 import Ansi
 import Color exposing [Color]
@@ -7,7 +7,7 @@ import Move exposing [Move, e1g1, e2e4, e7e5, f1c4, f3g1, f6g8, f8c5, g7g5, h2h4
 import Num exposing [bitwiseAnd, bitwiseNot, bitwiseOr, bitwiseXor, shiftLeftBy, shiftRightZfBy]
 import Piece exposing [PieceIdx]
 import S
-import Square exposing [SquareId, SquareIdx, a1, b1, c1, d1, e1, f1, g1, h1, a2, b2, c2, d2, e2, f2, g2, h2, e4, g5, g6, a7, b7, c7, d7, e7, f7, g7, h7, a8, b8, c8, d8, e8, f8, g8, h8, b1Idx, b8Idx, c1Idx, c8Idx, d5Idx, d6Idx, d7Idx, e1Idx, e3Idx, e8Idx, g1Idx, g6Idx, g8Idx]
+import Square exposing [SquareId, SquareIdx, a1, b1, c1, d1, e1, f1, g1, h1, a2, b2, c2, d2, e2, f2, g2, h2, e4, g5, g6, a7, b7, c7, d7, e7, f7, g7, h7, a8, b8, c8, d8, e8, f8, g8, h8, a1Idx, b1Idx, b8Idx, c1Idx, c8Idx, d1Idx, d5Idx, d6Idx, d7Idx, e1Idx, e3Idx, e8Idx, f1Idx, g1Idx, g6Idx, g8Idx, h1Idx, a2Idx, b2Idx, c2Idx, d2Idx, e2Idx, f2Idx, g2Idx, h2Idx]
 
 Bitboard : U64
 
@@ -21,6 +21,8 @@ Board : {
     pawn : Bitboard,
     rook : Bitboard,
     flags : U64,
+    whiteMoves : List Move,
+    blackMoves : List Move,
 }
 
 squareMask = 0x3fu64
@@ -53,6 +55,8 @@ emptyBoard = {
     pawn: 0,
     rook: 0,
     flags: 0,
+    whiteMoves: [],
+    blackMoves: [],
 }
 
 initialBoard = {
@@ -65,6 +69,8 @@ initialBoard = {
     pawn: L.or [a2, b2, c2, d2, e2, f2, g2, h2, a7, b7, c7, d7, e7, f7, g7, h7],
     rook: L.or [a1, h1, a8, h8],
     flags: L.or [wksCastlingMask, wqsCastlingMask, bksCastlingMask, bqsCastlingMask],
+    whiteMoves: [],
+    blackMoves: [],
 }
 
 expect bitwiseAnd initialBoard.rook a1 != 0
@@ -125,13 +131,13 @@ expect isLegal emptyBoard == Bool.false
 isCastlingAllowed : Board, SquareIdx, SquareIdx -> Bool
 isCastlingAllowed = \board, fromIdx, toIdx ->
     if fromIdx == e1Idx && toIdx == c1Idx then
-        pieceAt board a1 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) b1c1d1) == 0 && bitwiseAnd board.flags wqsCastlingMask != 0
+        ica board e1 a1 b1c1d1 wqsCastlingMask
     else if fromIdx == e1Idx && toIdx == g1Idx then
-        pieceAt board h1 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) f1g1) == 0 && bitwiseAnd board.flags wksCastlingMask != 0
+        ica board e1 h1 f1g1 wksCastlingMask
     else if fromIdx == e8Idx && toIdx == c8Idx then
-        pieceAt board a8 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) b8c8d8) == 0 && bitwiseAnd board.flags bqsCastlingMask != 0
+        ica board e8 a8 b8c8d8 bqsCastlingMask
     else if fromIdx == e8Idx && toIdx == g8Idx then
-        pieceAt board h8 == Piece.rook && (bitwiseAnd (bitwiseOr board.white board.black) f8g8) == 0 && bitwiseAnd board.flags bksCastlingMask != 0
+        ica board e8 h8 f8g8 bksCastlingMask
     else
         Bool.false
 
@@ -139,6 +145,13 @@ expect isCastlingAllowed initialBoard e1Idx c1Idx == Bool.false
 expect isCastlingAllowed initialBoard e1Idx g1Idx == Bool.false
 expect isCastlingAllowed initialBoard e8Idx c8Idx == Bool.false
 expect isCastlingAllowed initialBoard e8Idx g8Idx == Bool.false
+
+ica : Board, SquareId, SquareId, Bitboard, U64 -> Bool
+ica = \board, kingSquare, rookSquare, blockingSquares, castlingMask ->
+    (pieceAt board rookSquare == Piece.rook)
+    && (colorAt board kingSquare == colorAt board rookSquare)
+    && ((bitwiseAnd (bitwiseOr board.white board.black) blockingSquares) == 0)
+    && (bitwiseAnd board.flags castlingMask != 0)
 
 isEnPassantAllowed : Board -> Bool
 isEnPassantAllowed = \board ->
@@ -170,9 +183,9 @@ expect
     board = { initialBoard & flags: initialBoard.flags + 53 }
     halfMoveClock board == 53
 
-## Return true if the two boards are equal if the flags field is ignored.
-equalsIgnoreFlags : Board, Board -> Bool
-equalsIgnoreFlags = \board1, board2 ->
+## Return true if the two boards are equal if only the pieces are considered.
+equalsPieces : Board, Board -> Bool
+equalsPieces = \board1, board2 ->
     (board1.white == board2.white)
     && (board1.black == board2.black)
     && (board1.bishop == board2.bishop)
@@ -186,7 +199,7 @@ expect
     board = withMoves initialBoard [ng1f3, ng8f6, f3g1, f6g8] White
     (board != initialBoard)
     &&
-    (equalsIgnoreFlags board initialBoard == Bool.true)
+    (equalsPieces board initialBoard == Bool.true)
 
 toStr : Board -> Str
 toStr = \board ->
@@ -478,6 +491,7 @@ capturePiece : Board, SquareId, PieceIdx, Color -> Board
 capturePiece = \board, square, captured, color ->
     { board &
         bishop: if captured == Piece.bishop then bitwiseXor board.bishop square else board.bishop,
+        king: if captured == Piece.king then bitwiseXor board.king square else board.king,
         knight: if captured == Piece.knight then bitwiseXor board.knight square else board.knight,
         pawn: if captured == Piece.pawn then bitwiseXor board.pawn square else board.pawn,
         queen: if captured == Piece.queen then bitwiseXor board.queen square else board.queen,
@@ -558,15 +572,16 @@ expect bbToStr initialBoard.white == "\n00000000\n00000000\n00000000\n00000000\n
 ## Return a list of square indices: one index for each square that is occupied in the given bitboard.
 bbToIdxs : Bitboard -> List SquareIdx
 bbToIdxs = \bitboard ->
-    iter = \bb, index, list ->
-        if bb == 0 then
+    iter = \b, list ->
+        if b == 0 then
             list
-        else if bitwiseAnd bb 1 != 0 then
-            iter (shiftRightZfBy bb 1) (index + 1) (List.append list index)
         else
-            iter (shiftRightZfBy bb 1) (index + 1) list
-    iter bitboard 0 []
+            idx = Num.countTrailingZeroBits b
+            next = bitwiseAnd b (bitwiseNot (shiftLeftBy 1u64 idx))
+            iter next (List.append list (Num.toU64 idx))
+    iter bitboard (List.withCapacity 64)
 
 expect bbToIdxs 0 == []
 expect bbToIdxs initialBoard.knight == [b1Idx, g1Idx, b8Idx, g8Idx]
 expect bbToIdxs initialBoard.king == [e1Idx, e8Idx]
+expect bbToIdxs initialBoard.white == [a1Idx, b1Idx, c1Idx, d1Idx, e1Idx, f1Idx, g1Idx, h1Idx, a2Idx, b2Idx, c2Idx, d2Idx, e2Idx, f2Idx, g2Idx, h2Idx]

@@ -31,4 +31,4 @@ Edit the XBoard resource file `~/.xboardrc` and add a new line to the option `-f
 
 ## About
 
-Rocky is still in an early stage, and is currently very weak. It has no opening book, no depth search, no time management, and limited positional knowledge. Over time, some of these things will hopefully improve.
+Rocky is still in an early stage, and is currently very weak. It has no opening book, limited depth search, no time management, and limited positional knowledge. Over time, some of these things will hopefully improve.
