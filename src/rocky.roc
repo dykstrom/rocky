@@ -1,5 +1,5 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.11.0/SY4WWMhWQ9NvQgvIthcv15AUeA7rAIJHAHgiaSHGhdY.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.16.0/O00IPk-Krg_diNS2dVWlI0ZQP794Vctxzv0ha96mK0E.tar.br",
 }
 
 import Board exposing [initialBoard]
@@ -12,7 +12,6 @@ import MoveParser
 import cli.Stderr
 import cli.Stdin
 import cli.Stdout
-import cli.Task exposing [Task]
 
 import "../data/version.txt" as version : Str
 
@@ -249,12 +248,12 @@ execute = \game, cmd, args ->
 
 executeAndFormat = \game, cmd, args, text ->
     when execute game cmd args is
-        Ok result -> (Ok (Step result.0), result.1)
-        Err (IllegalMove msg) -> (Ok (Step game), "Illegal move: $(msg)")
-        Err IllegalPosition -> (Ok (Step game), "tellusererror Illegal position")
-        Err SyntaxError -> (Ok (Step game), "Error (syntax error): $(text)")
-        Err NotLegal -> (Ok (Step game), "Error (command not legal now): $(text)")
-        Err (UnknownCommand msg) -> (Ok (Step game), "Error (unknown command): $(msg)")
+        Ok result -> result
+        Err (IllegalMove msg) -> (game, "Illegal move: $(msg)")
+        Err IllegalPosition -> (game, "tellusererror Illegal position")
+        Err SyntaxError -> (game, "Error (syntax error): $(text)")
+        Err NotLegal -> (game, "Error (command not legal now): $(text)")
+        Err (UnknownCommand msg) -> (game, "Error (unknown command): $(msg)")
 
 # ----------------------------------------------------------------------------
 # Main program
@@ -266,15 +265,15 @@ loop = \game ->
     args = List.sublist parts { start: 1, len: Num.maxU64 }
     when List.first parts is
         Ok cmd if cmd == "quit" ->
-            Task.fromResult (Ok (Done game))
+            Task.ok (Done {})
 
         Ok cmd ->
             tuple = executeAndFormat game cmd args input
-            {} <- Stdout.line tuple.1 |> Task.await
-            Task.fromResult tuple.0
+            Stdout.line! tuple.1
+            Task.ok (Step tuple.0)
 
         Err ListWasEmpty ->
-            Task.fromResult (Err ListWasEmpty)
+            Task.err ListWasEmpty
 
 run =
     Stdout.line! "# Welcome to rocky $(Str.trim version)"
