@@ -65,14 +65,14 @@ fi
 
 # Run tests
 log "Running tests..."
-roc test src/rocky.roc
+roc test src/main.roc
 if [[ $? -ne 0 ]]; then
     fail "Tests failed"
 fi
 
 # Build application binary
 log "Building application..."
-roc build --optimize --output ./ src/rocky.roc
+roc build --optimize --output ./rocky src/main.roc
 if [[ $? -ne 0 ]]; then
     fail "Build failed"
 fi
