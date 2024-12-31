@@ -5,6 +5,7 @@ app [main] {
 import cli.Stderr
 import cli.Stdin
 import cli.Stdout
+import cli.Utc
 
 import Command
 import Game exposing [initialGame]
@@ -69,9 +70,17 @@ loop = \game ->
             Task.ok (Done {})
 
         Ok cmd ->
+            startTime = Utc.now! {}
             tuple = executeAndFormat game cmd args input
-            Stdout.line! tuple.1
-            Task.ok (Step tuple.0)
+            endTime = Utc.now! {}
+            runTime = Utc.deltaAsMillis startTime endTime
+            if game.debug == On then
+                Stdout.line! "# Executed command in $(Num.toStr runTime) ms"
+                Stdout.line! tuple.1
+                Task.ok (Step tuple.0)
+            else
+                Stdout.line! tuple.1
+                Task.ok (Step tuple.0)
 
         Err ListWasEmpty ->
             Task.err ListWasEmpty
