@@ -14,6 +14,7 @@ Game : {
     board : Board,
     debug : [On, Off],
     pretty : [On, Off],
+    time : I128,
 }
 
 initialGame : Game
@@ -27,6 +28,7 @@ initialGame = {
     board: initialBoard,
     debug: Off,
     pretty: On,
+    time: 120_000,
 }
 
 makeMove : Game, Move -> Game

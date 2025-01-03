@@ -28,6 +28,7 @@ import Finder
 import Game exposing [Game, initialGame]
 import Move exposing [Move]
 import MoveParser
+import Util
 import Version exposing [version]
 
 # ----------------------------------------------------------------------------
@@ -177,8 +178,21 @@ setBoardCmd = \game, args ->
 
 # ----------------------------------------------------------------------------
 
-timeCmd = \game, _args ->
-    Ok (game, "")
+timeCmd = \game, args ->
+    when args is
+        [arg] ->
+            when Str.toI128 arg is
+                Ok timeInCs ->
+                    timeInMs = timeInCs * 10
+                    # Save time left according to XBoard
+                    Ok (
+                        { game & time: timeInMs },
+                        Util.debug game "XBoard says time left is $(Util.formatTime timeInMs)",
+                    )
+
+                _ -> Err SyntaxError
+
+        _ -> Err SyntaxError
 
 # ----------------------------------------------------------------------------
 
@@ -186,7 +200,7 @@ undoCmd = \game, _args ->
     if List.len game.boardHistory >= 1 && game.forceMode == On then
         move = Result.withDefault (List.last game.moveHistory) 0
         gameAfterUnmake = Game.unmakeMove game
-        Ok (gameAfterUnmake, debug gameAfterUnmake "Undo move $(Move.toStr move)")
+        Ok (gameAfterUnmake, Util.debug gameAfterUnmake "Undo move $(Move.toStr move)")
     else
         Err NotLegal
 
@@ -266,15 +280,8 @@ makeEngineMove = \gameBeforeMove ->
 
 formatMove : Game, Move, I64 -> Str
 formatMove = \game, move, score ->
-    debug game "Found move $(Move.toStr move) with score $(Num.toStr ((Num.toF64 score) / 1000.0))"
+    Util.debug game "Found move $(Move.toStr move) with score $(Num.toStr ((Num.toF64 score) / 1000.0))"
     |> Str.concat "move $(Move.toStr move)"
-
-debug : Game, Str -> Str
-debug = \game, msg ->
-    if game.debug == On then
-        Str.concat "# " msg |> Str.concat "\n"
-    else
-        ""
 
 ## Run 'fun' with the given game and args, and return the resulting game.
 runTest = \fun, game, args ->

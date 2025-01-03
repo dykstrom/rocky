@@ -1,7 +1,8 @@
-module [withMoves, withHistory]
+module [debug, formatTime, withMoves, withHistory]
 
 import Board exposing [Board, initialBoard]
 import Color exposing [Color]
+import Game exposing [Game]
 import Move exposing [Move]
 import Piece exposing [PieceIdx]
 import S
@@ -79,3 +80,15 @@ isCastling = \fromIdx, toIdx, movedIdx ->
     (movedIdx == Piece.king)
     &&
     ((fromIdx == e1Idx && toIdx == c1Idx) || (fromIdx == e1Idx && toIdx == g1Idx) || (fromIdx == e8Idx && toIdx == c8Idx) || (fromIdx == e8Idx && toIdx == g8Idx))
+
+## If debug is enabled, return the message prefixed by '#'. Otherwise, return an empty string.
+debug : Game, Str -> Str
+debug = \game, msg ->
+    if game.debug == On then
+        Str.concat "# " msg |> Str.concat "\n"
+    else
+        ""
+
+formatTime : I128 -> Str
+formatTime = \timeInMs ->
+    "$(Num.toStr (Num.toF64 timeInMs / 1_000)) s"

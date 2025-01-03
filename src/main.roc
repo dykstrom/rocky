@@ -10,6 +10,7 @@ import cli.Utc
 import Command
 import Game exposing [initialGame]
 import MoveParser
+import Util
 import Version exposing [version]
 
 # ----------------------------------------------------------------------------
@@ -73,14 +74,15 @@ loop = \game ->
             startTime = Utc.now! {}
             tuple = executeAndFormat game cmd args input
             endTime = Utc.now! {}
-            runTime = Utc.deltaAsMillis startTime endTime
-            if game.debug == On then
-                Stdout.line! "# Executed command in $(Num.toStr runTime) ms"
-                Stdout.line! tuple.1
-                Task.ok (Step tuple.0)
-            else
-                Stdout.line! tuple.1
-                Task.ok (Step tuple.0)
+            runTime = Num.toI128 (Utc.deltaAsMillis startTime endTime)
+            gameAfterMove = tuple.0
+            msgAfterMove = tuple.1
+            timeLeft = tuple.0.time - runTime
+            finalGame = { gameAfterMove & time: timeLeft }
+            Util.debug finalGame "Executed '$(input)' in $(Util.formatTime runTime), time left is $(Util.formatTime timeLeft)"
+            |> Str.concat msgAfterMove
+            |> Stdout.line!
+            Task.ok (Step finalGame)
 
         Err ListWasEmpty ->
             Task.err ListWasEmpty
