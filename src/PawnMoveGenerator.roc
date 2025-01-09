@@ -206,7 +206,7 @@ createWhiteEnPassantMoves = \board, myPawns ->
     enPassantIdx = Board.enPassantSquare board
     pawnIdxs = Board.bbToIdxs myPawns
     # Pawn must start on fifth row to make an 'en passant' capture
-    List.keepIf pawnIdxs (\idx -> (enPassantIdx == idx + 7 || enPassantIdx == idx + 9) && idx // 8 == 4)
+    List.keepIf pawnIdxs (\idx -> (idx // 8 == 4) && (enPassantIdx == idx + 7 || enPassantIdx == idx + 9))
     |> List.map \fromIdx ->
         Move.createEnPassant fromIdx enPassantIdx
 
@@ -215,7 +215,9 @@ createBlackEnPassantMoves = \board, myPawns ->
     enPassantIdx = Board.enPassantSquare board
     pawnIdxs = Board.bbToIdxs myPawns
     # Pawn must start on fourth row to make an 'en passant' capture
-    List.keepIf pawnIdxs (\idx -> (enPassantIdx == idx - 7 || enPassantIdx == idx - 9) && idx // 8 == 3)
+    # Add to enPassantIdx instead of subtract from idx to avoid U64 underflow in case idx == 8 (pawn on square a2)
+    # The && operator is not a short-circuit operator in Roc
+    List.keepIf pawnIdxs (\idx -> (idx // 8 == 3) && (enPassantIdx + 7 == idx || enPassantIdx + 9 == idx))
     |> List.map \fromIdx ->
         Move.createEnPassant fromIdx enPassantIdx
 
@@ -226,6 +228,10 @@ expect
 expect
     board = Util.withMoves initialBoard ["e2e4", "e7e5"] White
     moves = createBlackEnPassantMoves board (bitwiseAnd board.pawn board.black) |> toStr
+    Set.fromList moves == Set.fromList []
+expect
+    board = FenParser.fenToBoard Fen.crashInGenerateBlackEp
+    moves = createBlackEnPassantMoves board (L.or [a2, a7, b7]) |> toStr
     Set.fromList moves == Set.fromList []
 
 # ----------------------------------------------------------------------------
