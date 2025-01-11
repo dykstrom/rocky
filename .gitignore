@@ -1,4 +1,9 @@
+main
 rocky
 *.tar.gz
 *.pgn
 *.log
+xboard.*
+game.*
+log.*
+players.dat

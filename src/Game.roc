@@ -1,8 +1,9 @@
 module [Game, initialGame, makeMove, unmakeMove]
 
 import Board exposing [Board, initialBoard]
-import Move exposing [Move]
 import Color exposing [Color]
+import Move exposing [Move]
+import Time exposing [TimeControl, initialTimeControl]
 
 Game : {
     activeColor : Color,
@@ -14,6 +15,9 @@ Game : {
     board : Board,
     debug : [On, Off],
     pretty : [On, Off],
+    timeControl : TimeControl,
+    timeLeft : I128,
+    movesLeft : I128,
 }
 
 initialGame : Game
@@ -27,6 +31,9 @@ initialGame = {
     board: initialBoard,
     debug: Off,
     pretty: On,
+    timeControl: initialTimeControl,
+    timeLeft: Num.toI128 initialTimeControl.base,
+    movesLeft: initialTimeControl.moves,
 }
 
 makeMove : Game, Move -> Game

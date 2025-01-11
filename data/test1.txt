@@ -2,12 +2,15 @@ xboard
 protover 2
 accepted debug
 new
+level 40 2 0
 setboard 3r2N1/4P2p/2B1k1p1/5r2/pK6/2Pbp1PQ/1N1q4/2n1B2R w - - 0 1
 go
 new
+level 0 1 5
 setboard 2B5/K3Q3/6b1/5p2/2pp3N/3r1P2/1PpP4/1n3kN1 w - - 0 1
 go
 new
+level 10 0:30 0
 setboard 3r4/P5b1/2p3P1/8/p2p3P/q1R2KP1/2pN4/k6B w - - 0 1
 go
 quit

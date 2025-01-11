@@ -2,6 +2,7 @@ module [
     backRankMateInThree,
     blackCanCaptureEp,
     blackIsCheckMated,
+    crashInGenerateBlackEp,
     drawBy50MoveRuleInOne,
     drawByStaleMate,
     drawByStaleMateInOne,
@@ -36,3 +37,4 @@ drawByStaleMateInOne = "k7/8/K7/8/8/8/8/Rn6 w - - 0 1"
 drawByStaleMateIsBest = "k7/8/K7/P7/8/8/Rp6/8 w - - 0 1"
 backRankMateInThree = "r7/1p3pkp/2p3p1/5n2/5B2/8/1P3PPP/6K1 b - - 0 17"
 blackIsCheckMated = "3r1N2/ppp5/2n1Q3/3k1p2/3P2B1/2P1P3/P1PK2PP/R7 b - - 4 23"
+crashInGenerateBlackEp = "r1bqkbnr/pp5p/2p2pp1/4p3/1P6/4P3/p2PNPPP/1NB2K1R b kq b3 0 2"
