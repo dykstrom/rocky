@@ -5,6 +5,7 @@ module [
     forceCmd,
     goCmd,
     helpCmd,
+    levelCmd,
     newCmd,
     otimCmd,
     pingCmd,
@@ -28,6 +29,7 @@ import Finder
 import Game exposing [Game, initialGame]
 import Move exposing [Move]
 import MoveParser
+import Time exposing [initialTimeControl, allocateTimeForMove]
 import Util
 import Version exposing [version]
 
@@ -84,6 +86,7 @@ helpText =
     go        = turn force mode off and set the chess engine to
                 play the color that is on move
     help      = show this help text
+    level     = set time control (see xboard documentation)
     new       = start a new game with the chess engine as black
     ping      = ping the chess engine
     plain     = show the board in plain text without any colors
@@ -98,6 +101,22 @@ helpText =
 
 helpCmd = \game, _args ->
     Ok (game, helpText)
+
+# ----------------------------------------------------------------------------
+
+levelCmd = \game, args ->
+    when args is
+        [mps, base, inc] ->
+            when Time.parseTimeControl mps base inc is
+                Ok tc -> Ok ({ game & timeControl: tc, timeLeft: tc.base, movesLeft: tc.moves }, "")
+                Err error -> Err error
+
+        _ -> Err SyntaxError
+
+expect
+    levelCmd { timeControl: initialTimeControl, timeLeft: 0, movesLeft: 0 } ["40", "60", "0"]
+    ==
+    Ok ({ timeControl: { type: Classic, moves: 40, base: 3_600_000, inc: 0 }, timeLeft: 3_600_000, movesLeft: 40 }, "")
 
 # ----------------------------------------------------------------------------
 
@@ -174,7 +193,16 @@ resultCmd = \game, _args ->
 
 setBoardCmd = \game, args ->
     FenParser.fromList args
-    |> Result.map \g -> ({ g & debug: game.debug, pretty: game.pretty }, "")
+    |> Result.map \g -> (
+            { g &
+                debug: game.debug,
+                pretty: game.pretty,
+                timeControl: game.timeControl,
+                timeLeft: game.timeControl.base,
+                movesLeft: game.timeControl.moves,
+            },
+            "",
+        )
 
 # ----------------------------------------------------------------------------
 
@@ -186,8 +214,8 @@ timeCmd = \game, args ->
                     timeInMs = timeInCs * 10
                     # Save time left according to XBoard
                     Ok (
-                        { game & time: timeInMs },
-                        Util.debug game "XBoard says time left is $(Util.formatTime timeInMs)",
+                        { game & timeLeft: timeInMs },
+                        Util.debug game "XBoard says time left is $(Time.formatTime timeInMs)",
                     )
 
                 _ -> Err SyntaxError
@@ -262,11 +290,16 @@ xboardCmd = \game, _args ->
 
 ## Find and make the engine move given the gameBeforeMove.
 makeEngineMove = \gameBeforeMove ->
+    timeLeft = gameBeforeMove.timeLeft
+    movesLeft = gameBeforeMove.movesLeft
+    timeForMove = allocateTimeForMove gameBeforeMove.timeControl timeLeft movesLeft
+    timeText = formatTimeText gameBeforeMove timeLeft movesLeft timeForMove
     engineMove = Finder.findMove gameBeforeMove.board gameBeforeMove.boardHistory gameBeforeMove.activeColor
     when engineMove is
         FoundMove { move: move, score: score } ->
-            gameAfterMove = Game.makeMove gameBeforeMove move
-            Ok (gameAfterMove, formatMove gameAfterMove move score)
+            gameAfterMove = updateTimeData (Game.makeMove gameBeforeMove move)
+            moveText = formatMove gameAfterMove move score
+            Ok (gameAfterMove, Str.concat timeText moveText)
 
         Mated ->
             if
@@ -278,10 +311,35 @@ makeEngineMove = \gameBeforeMove ->
 
         Draw -> Ok (gameBeforeMove, "1/2-1/2 {Stalemate}")
 
+## Returns the game with updated time data, that is, updated number of
+## moves and time left to the time control. This function does not subtract
+## used time from timeLeft, it only deals with time control updates.
+updateTimeData = \game ->
+    if game.timeControl.type == Classic then
+        if game.movesLeft == 1 then
+            # If the last move before the time control was made,
+            # add extra time and reset number of moves left
+            { game & movesLeft: game.timeControl.moves, timeLeft: game.timeLeft + game.timeControl.base }
+        else
+            # Otherwise, just reduce number of moves left to time control
+            { game & movesLeft: game.movesLeft - 1 }
+    else
+        # For incremental games, add the time increment
+        { game & timeLeft: (game.timeLeft + game.timeControl.inc) }
+
+expect updateTimeData initialGame == { initialGame & movesLeft: initialGame.movesLeft - 1 }
+expect
+    updateTimeData { initialGame & movesLeft: 1, timeLeft: 1 }
+    ==
+    { initialGame & timeLeft: initialGame.timeControl.base + 1 }
+
 formatMove : Game, Move, I64 -> Str
 formatMove = \game, move, score ->
     Util.debug game "Found move $(Move.toStr move) with score $(Num.toStr ((Num.toF64 score) / 1000.0))"
     |> Str.concat "move $(Move.toStr move)"
+
+formatTimeText = \game, timeLeft, movesLeft, timeForMove ->
+    Util.debug game "Time left: $(Time.formatTime timeLeft), moves left: $(Num.toStr movesLeft), time for move: $(Time.formatTime timeForMove)"
 
 ## Run 'fun' with the given game and args, and return the resulting game.
 runTest = \fun, game, args ->

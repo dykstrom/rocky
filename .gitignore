@@ -3,4 +3,7 @@ rocky
 *.tar.gz
 *.pgn
 *.log
-xboard.debug
+xboard.*
+game.*
+log.*
+players.dat

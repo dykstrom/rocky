@@ -10,6 +10,7 @@ import cli.Utc
 import Command
 import Game exposing [initialGame]
 import MoveParser
+import Time exposing [formatTime]
 import Util
 import Version exposing [version]
 
@@ -24,6 +25,7 @@ commands = Dict.fromList [
     ("force", Command.forceCmd),
     ("go", Command.goCmd),
     ("help", Command.helpCmd),
+    ("level", Command.levelCmd),
     ("new", Command.newCmd),
     ("otim", Command.otimCmd),
     ("ping", Command.pingCmd),
@@ -64,7 +66,7 @@ executeAndFormat = \game, cmd, args, text ->
 
 loop = \game ->
     input = Stdin.line!
-    parts = Str.split input " "
+    parts = Str.splitOn input " "
     args = List.sublist parts { start: 1, len: Num.maxU64 }
     when List.first parts is
         Ok cmd if cmd == "quit" ->
@@ -77,11 +79,10 @@ loop = \game ->
             runTime = Num.toI128 (Utc.deltaAsMillis startTime endTime)
             gameAfterMove = tuple.0
             msgAfterMove = tuple.1
-            timeLeft = tuple.0.time - runTime
-            finalGame = { gameAfterMove & time: timeLeft }
-            Util.debug finalGame "Executed '$(input)' in $(Util.formatTime runTime), time left is $(Util.formatTime timeLeft)"
-            |> Str.concat msgAfterMove
-            |> Stdout.line!
+            timeLeft = tuple.0.timeLeft - runTime
+            finalGame = { gameAfterMove & timeLeft: timeLeft }
+            Stdout.line! msgAfterMove
+            Stdout.line! (Util.debug finalGame "Executed '$(input)' in $(formatTime runTime), time left: $(formatTime timeLeft)")
             Task.ok (Step finalGame)
 
         Err ListWasEmpty ->

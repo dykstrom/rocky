@@ -1,4 +1,4 @@
-module [debug, formatTime, withMoves, withHistory]
+module [debug, withMoves, withHistory]
 
 import Board exposing [Board, initialBoard]
 import Color exposing [Color]
@@ -88,7 +88,3 @@ debug = \game, msg ->
         Str.concat "# " msg |> Str.concat "\n"
     else
         ""
-
-formatTime : I128 -> Str
-formatTime = \timeInMs ->
-    "$(Num.toStr (Num.toF64 timeInMs / 1_000)) s"

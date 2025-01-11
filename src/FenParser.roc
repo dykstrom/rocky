@@ -12,7 +12,7 @@ import Util
 ## Parse a FEN string and return a Game initialized from that string.
 fromStr : Str -> Result Game [IllegalPosition, SyntaxError]
 fromStr = \fen ->
-    fromList (Str.split fen " ")
+    fromList (Str.splitOn fen " ")
 
 fromList : List Str -> Result Game [IllegalPosition, SyntaxError]
 fromList = \fen ->
@@ -51,7 +51,7 @@ expect
 expect fromStr Fen.syntaxError == Err SyntaxError
 
 withPieces = \game, str ->
-    ranks = Str.split str "/"
+    ranks = Str.splitOn str "/"
     if List.len ranks == 8 then
         withRanks game.board ranks |> Result.map \b -> { game & board: b }
     else
