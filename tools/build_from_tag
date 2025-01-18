@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+#set -euox pipefail
+set -uo pipefail
+
+# ANSI colors
+RED='\033[1;31m'
+DEFAULT='\033[0m'
+
+# Application version file
+VERSION_FILE=data/version.txt
+
+# ----------------------------------------------------------------------------
+
+function log  {
+    printf "$1\n"
+}
+
+function fail {
+    printf "\n${RED}$1, exiting...${DEFAULT}\n"
+    exit 1
+}
+
+function fail-and-switch {
+    printf "\n${RED}$1, exiting...${DEFAULT}\n"
+    log "Switching back to previous branch..."
+    git switch -
+    if [[ $? -ne 0 ]]; then
+        printf "\n${RED}Could not switch branches!${DEFAULT}\n"
+    fi
+    exit 1
+}
+
+# ----------------------------------------------------------------------------
+
+# Check that there are no uncommitted or untracked files
+log "Checking uncommitted files..."
+NUM_UNCOMMITTED=$(git status --porcelain=v1 | wc -l | xargs)
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git status' failed"
+fi
+if [[ $NUM_UNCOMMITTED -ne 0 ]]; then
+    fail "There are uncommitted files"
+fi
+
+# Update local repo
+log "Updating files..."
+git pull
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git pull' failed"
+fi
+
+# Read application version
+VERSION=$(cat $VERSION_FILE | xargs)
+if [[ $? -ne 0 ]]; then
+    fail "Application version file '$VERSION_FILE' not found"
+fi
+
+# Name of git tag
+GIT_TAG="rocky-$VERSION"
+log "Using tag $GIT_TAG..."
+
+# List all existing git tags
+log "Checking git tags..."
+TAGS_LIST=$(git tag)
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git tag' failed"
+fi
+
+# Check that git tag does exist
+echo $TAGS_LIST | grep $GIT_TAG > /dev/null
+if [[ $? -ne 0 ]]; then
+    fail "Git tag $GIT_TAG does not exist"
+fi
+
+# Check out git tag
+log "Checking out git tag $GIT_TAG"
+git checkout "$GIT_TAG" 2> /dev/null
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git checkout $GIT_TAG' failed"
+fi
+
+# Run tests
+log "Running tests..."
+roc test src/main.roc
+if [[ $? -ne 0 ]]; then
+    fail-and-switch "Tests failed"
+fi
+
+# Build application binary
+log "Building application..."
+roc build --optimize --output ./rocky --linker legacy src/main.roc
+if [[ $? -ne 0 ]]; then
+    fail-and-switch "Build failed"
+fi
+
+# Create tar files
+BIN_ARCHIVE_FILE="rocky-$VERSION-bin.tar.gz"
+SRC_ARCHIVE_FILE="rocky-$VERSION-src.tar.gz"
+
+log "Creating binary archive..."
+tar -czf "$BIN_ARCHIVE_FILE" rocky README.md LICENSE
+if [[ $? -ne 0 ]]; then
+    fail-and-switch "Creating archive file '$BIN_ARCHIVE_FILE' failed"
+fi
+
+log "Creating source archive..."
+tar -czf "$SRC_ARCHIVE_FILE" src data README.md LICENSE
+if [[ $? -ne 0 ]]; then
+    fail-and-switch "Creating archive file '$SRC_ARCHIVE_FILE' failed"
+fi
+
+# Switch back to previous branch
+log "Switching back to previous branch..."
+git switch -
+if [[ $? -ne 0 ]]; then
+    fail "Command 'git switch -' failed"
+fi
