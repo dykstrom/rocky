@@ -1,4 +1,4 @@
-module [PieceIdx, fromStr, toStr, toPrettyStr, none, bishop, king, knight, pawn, queen, rook]
+module [PieceIdx, from_str, to_str, to_pretty_str, none, bishop, king, knight, pawn, queen, rook]
 
 import Color exposing [Color]
 import S
@@ -16,29 +16,29 @@ rook = 6u64
 # Note: Index 0 is 'none'.
 pieces = " bknpqr"
 
-fromStr : Str -> Result PieceIdx [SyntaxError]
-fromStr = \str ->
-    S.indexOf pieces str |> Result.mapErr \_ -> SyntaxError
+from_str : Str -> Result PieceIdx [SyntaxError]
+from_str = |str|
+    S.index_of(pieces, str) |> Result.map_err(|_| SyntaxError)
 
-expect fromStr "b" == Ok bishop
-expect fromStr "k" == Ok king
-expect fromStr "n" == Ok knight
-expect fromStr "p" == Ok pawn
-expect fromStr "q" == Ok queen
-expect fromStr "r" == Ok rook
+expect from_str("b") == Ok(bishop)
+expect from_str("k") == Ok(king)
+expect from_str("n") == Ok(knight)
+expect from_str("p") == Ok(pawn)
+expect from_str("q") == Ok(queen)
+expect from_str("r") == Ok(rook)
 
-toStr : PieceIdx -> Str
-toStr = \piece ->
-    when S.substr pieces { start: piece, len: 1 } is
-        Ok s -> s
-        _ -> crash "Should not happen: unknown piece in toStr: $(Num.toStr piece)"
+to_str : PieceIdx -> Str
+to_str = |piece|
+    when S.substr(pieces, { start: piece, len: 1 }) is
+        Ok(s) -> s
+        _ -> crash("Should not happen: unknown piece in toStr: ${Num.to_str(piece)}")
 
-expect toStr none == " "
-expect toStr bishop == "b"
-expect toStr rook == "r"
+expect to_str(none) == " "
+expect to_str(bishop) == "b"
+expect to_str(rook) == "r"
 
-toPrettyStr : PieceIdx, Color -> Str
-toPrettyStr = \piece, color ->
+to_pretty_str : PieceIdx, Color -> Str
+to_pretty_str = |piece, color|
     when (piece, color) is
         (0, White) -> " "
         (1, White) -> "♗"
@@ -54,7 +54,7 @@ toPrettyStr = \piece, color ->
         (4, Black) -> "♟︎"
         (5, Black) -> "♛"
         (6, Black) -> "♜"
-        _ -> crash "Should not happen: unknown piece in toPrettyStr: $(Num.toStr piece)"
+        _ -> crash("Should not happen: unknown piece in toPrettyStr: ${Num.to_str(piece)}")
 
-expect toPrettyStr knight White == "♘"
-expect toPrettyStr queen Black == "♛"
+expect to_pretty_str(knight, White) == "♘"
+expect to_pretty_str(queen, Black) == "♛"

@@ -1,70 +1,70 @@
-module [Game, initialGame, makeMove, unmakeMove]
+module [Game, initial_game, make_move, unmake_move]
 
-import Board exposing [Board, initialBoard]
+import Board exposing [Board, initial_board]
 import Color exposing [Color]
 import Move exposing [Move]
-import Time exposing [TimeControl, initialTimeControl]
+import Time exposing [TimeControl, initial_time_control]
 
 Game : {
-    activeColor : Color,
-    engineColor : Color,
-    forceMode : [On, Off],
-    moveHistory : List Move,
-    moveNumber : U64,
-    boardHistory : List Board,
+    active_color : Color,
+    engine_color : Color,
+    force_mode : [On, Off],
+    move_history : List Move,
+    move_number : U64,
+    board_history : List Board,
     board : Board,
     debug : [On, Off],
     pretty : [On, Off],
-    timeControl : TimeControl,
-    timeLeft : I128,
-    movesLeft : I128,
+    time_control : TimeControl,
+    time_left : I128,
+    moves_left : I128,
 }
 
-initialGame : Game
-initialGame = {
-    activeColor: White,
-    engineColor: Black,
-    forceMode: Off,
-    moveHistory: [],
-    moveNumber: 1,
-    boardHistory: [],
-    board: initialBoard,
+initial_game : Game
+initial_game = {
+    active_color: White,
+    engine_color: Black,
+    force_mode: Off,
+    move_history: [],
+    move_number: 1,
+    board_history: [],
+    board: initial_board,
     debug: Off,
     pretty: On,
-    timeControl: initialTimeControl,
-    timeLeft: Num.toI128 initialTimeControl.base,
-    movesLeft: initialTimeControl.moves,
+    time_control: initial_time_control,
+    time_left: Num.to_i128(initial_time_control.base),
+    moves_left: initial_time_control.moves,
 }
 
-makeMove : Game, Move -> Game
-makeMove = \game, move ->
-    newBoardHistory = List.append game.boardHistory game.board
-    newBoard = Board.makeMove game.board move game.activeColor
-    newColor = Color.flipColor game.activeColor
-    newMoveNumber = game.moveNumber + if newColor == White then 1 else 0
-    newMoveHistory = List.append game.moveHistory move
+make_move : Game, Move -> Game
+make_move = |game, move|
+    new_board_history = List.append(game.board_history, game.board)
+    new_board = Board.make_move(game.board, move, game.active_color)
+    new_color = Color.flip_color(game.active_color)
+    new_move_number = game.move_number + if new_color == White then 1 else 0
+    new_move_history = List.append(game.move_history, move)
     { game &
-        activeColor: newColor,
-        moveNumber: newMoveNumber,
-        moveHistory: newMoveHistory,
-        board: newBoard,
-        boardHistory: newBoardHistory,
+        active_color: new_color,
+        move_number: new_move_number,
+        move_history: new_move_history,
+        board: new_board,
+        board_history: new_board_history,
     }
 
-unmakeMove : Game -> Game
-unmakeMove = \game ->
-    newColor = Color.flipColor game.activeColor
-    newMoveNumber = game.moveNumber - if newColor == Black then 1 else 0
-    newMoveHistory = List.dropLast game.moveHistory 1
-    newBoard =
-        when List.last game.boardHistory is
-            Ok board -> board
-            Err ListWasEmpty -> crash "Should not happen: boardHistory is empty"
-    newBoardHistory = List.dropLast game.boardHistory 1
+unmake_move : Game -> Game
+unmake_move = |game|
+    new_color = Color.flip_color(game.active_color)
+    new_move_number = game.move_number - if new_color == Black then 1 else 0
+    new_move_history = List.drop_last(game.move_history, 1)
+    new_board =
+        when List.last(game.board_history) is
+            Ok(board) -> board
+            Err(ListWasEmpty) -> crash("Should not happen: boardHistory is empty")
+    new_board_history = List.drop_last(game.board_history, 1)
     { game &
-        activeColor: newColor,
-        moveNumber: newMoveNumber,
-        moveHistory: newMoveHistory,
-        board: newBoard,
-        boardHistory: newBoardHistory,
+        active_color: new_color,
+        move_number: new_move_number,
+        move_history: new_move_history,
+        board: new_board,
+        board_history: new_board_history,
     }

@@ -1,83 +1,97 @@
 module [
-    acceptedCmd,
-    boardCmd,
-    computerCmd,
-    forceCmd,
-    goCmd,
-    helpCmd,
-    levelCmd,
-    newCmd,
-    otimCmd,
-    pingCmd,
-    plainCmd,
-    playOtherCmd,
-    protoverCmd,
-    rejectedCmd,
-    removeCmd,
-    resultCmd,
-    setBoardCmd,
-    timeCmd,
-    undoCmd,
-    usermoveCmd,
-    xboardCmd,
+    accepted_cmd,
+    board_cmd,
+    computer_cmd,
+    force_cmd,
+    go_cmd,
+    help_cmd,
+    level_cmd,
+    new_cmd,
+    otim_cmd,
+    ping_cmd,
+    plain_cmd,
+    play_other_cmd,
+    protover_cmd,
+    rejected_cmd,
+    remove_cmd,
+    result_cmd,
+    set_board_cmd,
+    time_cmd,
+    undo_cmd,
+    usermove_cmd,
+    xboard_cmd,
 ]
 
-import Board exposing [initialBoard]
+import Board exposing [initial_board]
 import Color
 import FenParser
 import Finder
-import Game exposing [Game, initialGame]
+import Game exposing [Game, initial_game]
 import Move exposing [Move]
 import MoveParser
-import Time exposing [initialTimeControl, allocateTimeForMove]
+import Time exposing [initial_time_control, allocate_time_for_move]
 import Util
 import Version exposing [version]
 
 # ----------------------------------------------------------------------------
 
-acceptedCmd = \game, args ->
+accepted_cmd : Game, List Str -> Result (Game, Str) _
+accepted_cmd = |game, args|
     when args is
-        ["debug"] -> Ok ({ game & debug: On }, "")
-        _ -> Ok (game, "")
+        ["debug"] -> Ok(({ game & debug: On }, ""))
+        _ -> Ok((game, ""))
 
-expect acceptedCmd { debug: Off } ["debug"] == Ok ({ debug: On }, "")
-expect acceptedCmd { debug: Off } ["ping"] == Ok ({ debug: Off }, "")
-
-# ----------------------------------------------------------------------------
-
-boardCmd = \game, _args ->
-    Ok (game, if game.pretty == On then Board.toPrettyStr game.board else Board.toStr game.board)
-
-# ----------------------------------------------------------------------------
-
-computerCmd = \game, _args ->
-    Ok (game, "")
+expect
+    accepted_cmd({ initial_game & debug: Off }, ["debug"])
+    ==
+    Ok(({ initial_game & debug: On }, ""))
+expect
+    accepted_cmd({ initial_game & debug: Off }, ["ping"])
+    ==
+    Ok(({ initial_game & debug: Off }, ""))
 
 # ----------------------------------------------------------------------------
 
-forceCmd = \game, _args ->
-    Ok ({ game & forceMode: On }, "")
-
-expect forceCmd { forceMode: Off } [] == Ok ({ forceMode: On }, "")
+board_cmd : Game, List Str -> Result (Game, Str) _
+board_cmd = |game, _args|
+    Ok((game, if game.pretty == On then Board.to_pretty_str(game.board) else Board.to_str(game.board)))
 
 # ----------------------------------------------------------------------------
 
-goCmd = \game, _args ->
-    gameBeforeMove = { game & forceMode: Off, engineColor: game.activeColor }
+computer_cmd : Game, List Str -> Result (Game, Str) _
+computer_cmd = |game, _args|
+    Ok((game, ""))
+
+# ----------------------------------------------------------------------------
+
+force_cmd : Game, List Str -> Result (Game, Str) _
+force_cmd = |game, _args|
+    Ok(({ game & force_mode: On }, ""))
+
+expect
+    force_cmd({ initial_game & force_mode: Off }, [])
+    ==
+    Ok(({ initial_game & force_mode: On }, ""))
+
+# ----------------------------------------------------------------------------
+
+go_cmd : Game, List Str -> Result (Game, Str) _
+go_cmd = |game, _args|
+    game_before_move = { game & force_mode: Off, engine_color: game.active_color }
     # Make engine move
-    makeEngineMove gameBeforeMove
+    make_engine_move(game_before_move)
 
 expect
     # Given
-    original = { initialGame & forceMode: On, activeColor: White }
+    original = { initial_game & force_mode: On, active_color: White }
     # When
-    actual = runTest goCmd original []
+    actual = run_test(go_cmd, original, [])
     # Then
-    actual.forceMode == Off && actual.activeColor == Black && actual.engineColor == White && actual.moveNumber == 1 && List.len actual.moveHistory == 1
+    actual.force_mode == Off and actual.active_color == Black and actual.engine_color == White and actual.move_number == 1 and List.len(actual.move_history) == 1
 
 # ----------------------------------------------------------------------------
 
-helpText =
+help_text =
     """
     Available commands
     ------------------
@@ -99,248 +113,276 @@ helpText =
     xboard    = put the engine in xboard mode
     """
 
-helpCmd = \game, _args ->
-    Ok (game, helpText)
+help_cmd : Game, List Str -> Result (Game, Str) _
+help_cmd = |game, _args|
+    Ok((game, help_text))
 
 # ----------------------------------------------------------------------------
 
-levelCmd = \game, args ->
+level_cmd : Game, List Str -> Result (Game, Str) _
+level_cmd = |game, args|
     when args is
         [mps, base, inc] ->
-            when Time.parseTimeControl mps base inc is
-                Ok tc -> Ok ({ game & timeControl: tc, timeLeft: tc.base, movesLeft: tc.moves }, "")
-                Err error -> Err error
+            when Time.parse_time_control(mps, base, inc) is
+                Ok(tc) -> Ok(({ game & time_control: tc, time_left: tc.base, moves_left: tc.moves }, ""))
+                Err(error) -> Err(error)
 
-        _ -> Err SyntaxError
+        _ -> Err(SyntaxError)
 
 expect
-    levelCmd { timeControl: initialTimeControl, timeLeft: 0, movesLeft: 0 } ["40", "60", "0"]
+    level_cmd({ initial_game & time_control: initial_time_control, time_left: 0, moves_left: 0 }, ["40", "60", "0"])
     ==
-    Ok ({ timeControl: { type: Classic, moves: 40, base: 3_600_000, inc: 0 }, timeLeft: 3_600_000, movesLeft: 40 }, "")
+    Ok(({ initial_game & time_control: { type: Classic, moves: 40, base: 3_600_000, inc: 0 }, time_left: 3_600_000, moves_left: 40 }, ""))
 
 # ----------------------------------------------------------------------------
 
-newCmd = \game, _args ->
+new_cmd : Game, List Str -> Result (Game, Str) _
+new_cmd = |game, _args|
     # Keep feature and settings
-    Ok ({ initialGame & debug: game.debug, pretty: game.pretty }, "")
-
-expect newCmd { debug: On, pretty: Off } [] == Ok ({ initialGame & debug: On, pretty: Off }, "")
-
-# ----------------------------------------------------------------------------
-
-otimCmd = \game, _args ->
-    Ok (game, "")
-
-# ----------------------------------------------------------------------------
-
-pingCmd = \game, args ->
-    when args is
-        [arg] -> Ok (game, "pong $(arg)")
-        _ -> Err SyntaxError
-
-expect pingCmd {} ["1"] == Ok ({}, "pong 1")
-expect pingCmd {} [] == Err SyntaxError
-
-# ----------------------------------------------------------------------------
-
-plainCmd = \game, _args ->
-    Ok ({ game & pretty: Off }, "")
-
-# ----------------------------------------------------------------------------
-
-playOtherCmd = \game, _args ->
-    Ok ({ game & forceMode: Off, engineColor: Color.flipColor game.activeColor }, "")
+    Ok(({ initial_game & debug: game.debug, pretty: game.pretty }, ""))
 
 expect
-    playOtherCmd { forceMode: On, activeColor: Black, engineColor: Black } []
+    new_cmd({ initial_game & debug: On, pretty: Off }, [])
     ==
-    Ok ({ forceMode: Off, activeColor: Black, engineColor: White }, "")
+    Ok(({ initial_game & debug: On, pretty: Off }, ""))
 
 # ----------------------------------------------------------------------------
 
-protoverCmd = \game, _args ->
-    Ok (game, "feature ping=1\nfeature setboard=1\nfeature playother=1\nfeature san=0\nfeature usermove=1\nfeature time=1\nfeature draw=0\nfeature sigint=0\nfeature sigterm=0\nfeature reuse=1\nfeature analyze=0\nfeature myname=\"rocky $(Str.trim version)\"\nfeature variants=\"normal\"\nfeature colors=0\nfeature ics=0\nfeature name=0\nfeature pause=0\nfeature debug=1\nfeature done=1")
+otim_cmd : Game, List Str -> Result (Game, Str) _
+otim_cmd = |game, _args|
+    Ok((game, ""))
 
 # ----------------------------------------------------------------------------
 
-rejectedCmd = \game, _args ->
-    Ok (game, "")
+# TODO: Change all command to return a tuple of (Game, Str) like roc format almost
+# changed it into.
+
+ping_cmd : Game, List Str -> Result (Game, Str) _
+ping_cmd = |game, args|
+    when args is
+        [arg] -> Ok((game, "pong ${arg}"))
+        _ -> Err(SyntaxError)
+
+expect ping_cmd(initial_game, ["1"]) == Ok((initial_game, "pong 1"))
+expect ping_cmd(initial_game, []) == Err(SyntaxError)
 
 # ----------------------------------------------------------------------------
 
-removeCmd = \game, _args ->
-    if List.len game.boardHistory >= 2 then
-        gameAfterUnmake = Game.unmakeMove game |> Game.unmakeMove
-        Ok (gameAfterUnmake, "")
+plain_cmd : Game, List Str -> Result (Game, Str) _
+plain_cmd = |game, _args|
+    Ok(({ game & pretty: Off }, ""))
+
+# ----------------------------------------------------------------------------
+
+play_other_cmd : Game, List Str -> Result (Game, Str) _
+play_other_cmd = |game, _args|
+    Ok(({ game & force_mode: Off, engine_color: Color.flip_color(game.active_color) }, ""))
+
+expect
+    play_other_cmd({ initial_game & force_mode: On, active_color: Black, engine_color: Black }, [])
+    ==
+    Ok(({ initial_game & force_mode: Off, active_color: Black, engine_color: White }, ""))
+
+# ----------------------------------------------------------------------------
+
+protover_cmd : Game, List Str -> Result (Game, Str) _
+protover_cmd = |game, _args|
+    Ok((game, "feature ping=1\nfeature setboard=1\nfeature playother=1\nfeature san=0\nfeature usermove=1\nfeature time=1\nfeature draw=0\nfeature sigint=0\nfeature sigterm=0\nfeature reuse=1\nfeature analyze=0\nfeature myname=\"rocky ${Str.trim(version)}\"\nfeature variants=\"normal\"\nfeature colors=0\nfeature ics=0\nfeature name=0\nfeature pause=0\nfeature debug=1\nfeature done=1"))
+
+# ----------------------------------------------------------------------------
+
+rejected_cmd : Game, List Str -> Result (Game, Str) _
+rejected_cmd = |game, _args|
+    Ok((game, ""))
+
+# ----------------------------------------------------------------------------
+
+remove_cmd : Game, List Str -> Result (Game, Str) _
+remove_cmd = |game, _args|
+    if List.len(game.board_history) >= 2 then
+        game_after_unmake = Game.unmake_move(game) |> Game.unmake_move
+        Ok((game_after_unmake, ""))
     else
-        Err NotLegal
+        Err(NotLegal)
 
 expect
     # Given
-    original = { initialGame & moveNumber: 2, moveHistory: [0, 0], boardHistory: [initialBoard, initialBoard] }
+    original = { initial_game & move_number: 2, move_history: [0, 0], board_history: [initial_board, initial_board] }
     # When
-    actual = runTest removeCmd original []
+    actual = run_test(remove_cmd, original, [])
     # Then
-    expected = { original & moveNumber: 1, moveHistory: [], boardHistory: [] }
+    expected = { original & move_number: 1, move_history: [], board_history: [] }
     actual == expected
 
 # ----------------------------------------------------------------------------
 
-resultCmd = \game, _args ->
-    Ok (game, "")
+result_cmd : Game, List Str -> Result (Game, Str) _
+result_cmd = |game, _args|
+    Ok((game, ""))
 
 # ----------------------------------------------------------------------------
 
-setBoardCmd = \game, args ->
-    FenParser.fromList args
-    |> Result.map \g -> (
+set_board_cmd : Game, List Str -> Result (Game, Str) _
+set_board_cmd = |game, args|
+    g = FenParser.from_list(args)?
+    Ok(
+        (
             { g &
                 debug: game.debug,
                 pretty: game.pretty,
-                timeControl: game.timeControl,
-                timeLeft: game.timeControl.base,
-                movesLeft: game.timeControl.moves,
+                time_control: game.time_control,
+                time_left: game.time_control.base,
+                moves_left: game.time_control.moves,
             },
             "",
-        )
+        ),
+    )
 
 # ----------------------------------------------------------------------------
 
-timeCmd = \game, args ->
+time_cmd : Game, List Str -> Result (Game, Str) _
+time_cmd = |game, args|
     when args is
         [arg] ->
-            when Str.toI128 arg is
-                Ok timeInCs ->
-                    timeInMs = timeInCs * 10
+            when Str.to_i128(arg) is
+                Ok(time_in_cs) ->
+                    time_in_ms = time_in_cs * 10
                     # Save time left according to XBoard
-                    Ok (
-                        { game & timeLeft: timeInMs },
-                        Util.debug game "XBoard says time left is $(Time.formatTime timeInMs)",
+                    Ok(
+                        (
+                            { game & time_left: time_in_ms },
+                            Util.debug(game, "XBoard says time left is ${Time.format_time(time_in_ms)}"),
+                        ),
                     )
 
-                _ -> Err SyntaxError
+                _ -> Err(SyntaxError)
 
-        _ -> Err SyntaxError
+        _ -> Err(SyntaxError)
 
 # ----------------------------------------------------------------------------
 
-undoCmd = \game, _args ->
-    if List.len game.boardHistory >= 1 && game.forceMode == On then
-        move = Result.withDefault (List.last game.moveHistory) 0
-        gameAfterUnmake = Game.unmakeMove game
-        Ok (gameAfterUnmake, Util.debug gameAfterUnmake "Undo move $(Move.toStr move)")
+undo_cmd : Game, List Str -> Result (Game, Str) _
+undo_cmd = |game, _args|
+    if List.len(game.board_history) >= 1 and game.force_mode == On then
+        move = Result.with_default(List.last(game.move_history), 0)
+        game_after_unmake = Game.unmake_move(game)
+        Ok((game_after_unmake, Util.debug(game_after_unmake, "Undo move ${Move.to_str(move)}")))
     else
-        Err NotLegal
+        Err(NotLegal)
 
 expect
     # Given
-    original = { initialGame & activeColor: Black, forceMode: On, moveNumber: 1, moveHistory: [0], boardHistory: [initialBoard] }
+    original = { initial_game & active_color: Black, force_mode: On, move_number: 1, move_history: [0], board_history: [initial_board] }
     # When
-    actual = runTest undoCmd original []
+    actual = run_test(undo_cmd, original, [])
     # Then
-    expected = { original & activeColor: White, forceMode: On, moveNumber: 1, moveHistory: [], boardHistory: [] }
+    expected = { original & active_color: White, force_mode: On, move_number: 1, move_history: [], board_history: [] }
     actual == expected
 
 # ----------------------------------------------------------------------------
 
-usermoveCmd = \game, args ->
-    when List.first args is
-        Ok str ->
-            when MoveParser.parse game.board game.activeColor str is
-                Ok userMove ->
+usermove_cmd : Game, List Str -> Result (Game, Str) _
+usermove_cmd = |game, args|
+    when List.first(args) is
+        Ok(str) ->
+            when MoveParser.parse(game.board, game.active_color, str) is
+                Ok(user_move) ->
                     # Make user move
-                    gameAfterUserMove = Game.makeMove game userMove
-                    if gameAfterUserMove.forceMode == Off then
+                    game_after_user_move = Game.make_move(game, user_move)
+                    if game_after_user_move.force_mode == Off then
                         # Make engine move
-                        makeEngineMove gameAfterUserMove
+                        make_engine_move(game_after_user_move)
                     else
-                        Ok (gameAfterUserMove, "")
+                        Ok((game_after_user_move, ""))
 
-                Err IllegalMove -> Err (IllegalMove str)
-                Err SyntaxError -> Err (IllegalMove str)
+                Err(IllegalMove) -> Err(IllegalMove(str))
+                Err(SyntaxError) -> Err(IllegalMove(str))
 
-        Err ListWasEmpty -> Err SyntaxError
+        Err(ListWasEmpty) -> Err(SyntaxError)
 
 # Force move On
 expect
     # Given
-    original = { initialGame & forceMode: On }
+    original = { initial_game & force_mode: On }
     # When
-    actual = runTest usermoveCmd original ["e2e4"]
+    actual = run_test(usermove_cmd, original, ["e2e4"])
     # Then
-    actual.forceMode == On && actual.activeColor == Black && actual.moveNumber == 1 && List.len actual.moveHistory == 1
+    actual.force_mode == On and actual.active_color == Black and actual.move_number == 1 and List.len(actual.move_history) == 1
 
 # Force move Off
 expect
     # Given
-    original = initialGame
+    original = initial_game
     # When
-    actual = runTest usermoveCmd original ["e2e4"]
+    actual = run_test(usermove_cmd, original, ["e2e4"])
     # Then
-    actual.forceMode == Off && actual.activeColor == White && actual.moveNumber == 2 && List.len actual.moveHistory == 2
+    actual.force_mode == Off and actual.active_color == White and actual.move_number == 2 and List.len(actual.move_history) == 2
 
 # ----------------------------------------------------------------------------
 
-xboardCmd = \game, _args ->
-    Ok (game, "")
+xboard_cmd : Game, List Str -> Result (Game, Str) _
+xboard_cmd = |game, _args|
+    Ok((game, ""))
 
 # ----------------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------------
 
 ## Find and make the engine move given the gameBeforeMove.
-makeEngineMove = \gameBeforeMove ->
-    timeLeft = gameBeforeMove.timeLeft
-    movesLeft = gameBeforeMove.movesLeft
-    timeForMove = allocateTimeForMove gameBeforeMove.timeControl timeLeft movesLeft
-    timeText = formatTimeText gameBeforeMove timeLeft movesLeft timeForMove
-    engineMove = Finder.findMove gameBeforeMove.board gameBeforeMove.boardHistory gameBeforeMove.activeColor
-    when engineMove is
-        FoundMove { move: move, score: score } ->
-            gameAfterMove = updateTimeData (Game.makeMove gameBeforeMove move)
-            moveText = formatMove gameAfterMove move score
-            Ok (gameAfterMove, Str.concat timeText moveText)
+make_engine_move = |game_before_move|
+    time_left = game_before_move.time_left
+    moves_left = game_before_move.moves_left
+    time_for_move = allocate_time_for_move(game_before_move.time_control, time_left, moves_left)
+    time_text = format_time_text(game_before_move, time_left, moves_left, time_for_move)
+    engine_move = Finder.find_move(game_before_move.board, game_before_move.board_history, game_before_move.active_color)
+    when engine_move is
+        FoundMove({ move: move, score: score }) ->
+            game_after_move = update_time_data(Game.make_move(game_before_move, move))
+            move_text = format_move(game_after_move, move, score)
+            Ok((game_after_move, Str.concat(time_text, move_text)))
 
         Mated ->
             if
-                gameBeforeMove.activeColor == White
+                game_before_move.active_color == White
             then
-                Ok (gameBeforeMove, "0-1 {Black mates}")
+                Ok((game_before_move, "0-1 {Black mates}"))
             else
-                Ok (gameBeforeMove, "1-0 {White mates}")
+                Ok((game_before_move, "1-0 {White mates}"))
 
-        Draw -> Ok (gameBeforeMove, "1/2-1/2 {Stalemate}")
+        Draw -> Ok((game_before_move, "1/2-1/2 {Stalemate}"))
 
 ## Returns the game with updated time data, that is, updated number of
 ## moves and time left to the time control. This function does not subtract
 ## used time from timeLeft, it only deals with time control updates.
-updateTimeData = \game ->
-    if game.timeControl.type == Classic then
-        if game.movesLeft == 1 then
+update_time_data = |game|
+    if game.time_control.type == Classic then
+        if game.moves_left == 1 then
             # If the last move before the time control was made,
             # add extra time and reset number of moves left
-            { game & movesLeft: game.timeControl.moves, timeLeft: game.timeLeft + game.timeControl.base }
+            { game & moves_left: game.time_control.moves, time_left: game.time_left + game.time_control.base }
         else
             # Otherwise, just reduce number of moves left to time control
-            { game & movesLeft: game.movesLeft - 1 }
+            { game & moves_left: game.moves_left - 1 }
     else
         # For incremental games, add the time increment
-        { game & timeLeft: (game.timeLeft + game.timeControl.inc) }
+        { game & time_left: (game.time_left + game.time_control.inc) }
 
-expect updateTimeData initialGame == { initialGame & movesLeft: initialGame.movesLeft - 1 }
+expect update_time_data(initial_game) == { initial_game & moves_left: initial_game.moves_left - 1 }
 expect
-    updateTimeData { initialGame & movesLeft: 1, timeLeft: 1 }
+    update_time_data({ initial_game & moves_left: 1, time_left: 1 })
     ==
-    { initialGame & timeLeft: initialGame.timeControl.base + 1 }
+    { initial_game & time_left: initial_game.time_control.base + 1 }
 
-formatMove : Game, Move, I64 -> Str
-formatMove = \game, move, score ->
-    Util.debug game "Found move $(Move.toStr move) with score $(Num.toStr ((Num.toF64 score) / 1000.0))"
-    |> Str.concat "move $(Move.toStr move)"
+format_move : Game, Move, I64 -> Str
+format_move = |game, move, score|
+    Util.debug(game, "Found move ${Move.to_str(move)} with score ${Num.to_str(((Num.to_f64(score)) / 1000.0))}")
+    |> Str.concat("move ${Move.to_str(move)}")
 
-formatTimeText = \game, timeLeft, movesLeft, timeForMove ->
-    Util.debug game "Time left: $(Time.formatTime timeLeft), moves left: $(Num.toStr movesLeft), time for move: $(Time.formatTime timeForMove)"
+format_time_text = |game, time_left, moves_left, time_for_move|
+    Util.debug(game, "Time left: ${Time.format_time(time_left)}, moves left: ${Num.to_str(moves_left)}, time for move: ${Time.format_time(time_for_move)}")
 
 ## Run 'fun' with the given game and args, and return the resulting game.
-runTest = \fun, game, args ->
-    (Result.withDefault (fun game args) (initialGame, "")).0
+run_test = |fun, game, args|
+    when fun(game, args) is
+        Ok((g, _)) -> g
+        _ -> initial_game

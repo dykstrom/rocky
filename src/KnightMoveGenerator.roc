@@ -1,209 +1,219 @@
-module [generateMoves]
+module [generate_moves]
 
-import Board exposing [Bitboard, Board, initialBoard]
+import Board exposing [Bitboard, Board, initial_board]
 import Move exposing [Move]
-import Num exposing [bitwiseAnd]
+import Num exposing [bitwise_and]
 import Piece
 import Square exposing [
     SquareIdx,
-    a1Idx,
-    b1Idx,
-    c1Idx,
-    d1Idx,
-    e1Idx,
-    f1Idx,
-    g1Idx,
-    h1Idx,
-    a2Idx,
-    b2Idx,
-    c2Idx,
-    d2Idx,
-    e2Idx,
-    f2Idx,
-    g2Idx,
-    h2Idx,
-    a3Idx,
-    b3Idx,
-    c3Idx,
-    d3Idx,
-    e3Idx,
-    f3Idx,
-    g3Idx,
-    h3Idx,
-    a4Idx,
-    b4Idx,
-    c4Idx,
-    d4Idx,
-    e4Idx,
-    f4Idx,
-    g4Idx,
-    h4Idx,
-    a5Idx,
-    b5Idx,
-    c5Idx,
-    d5Idx,
-    e5Idx,
-    f5Idx,
-    g5Idx,
-    h5Idx,
-    a6Idx,
-    b6Idx,
-    c6Idx,
-    d6Idx,
-    e6Idx,
-    f6Idx,
-    g6Idx,
-    h6Idx,
-    a7Idx,
-    b7Idx,
-    c7Idx,
-    d7Idx,
-    e7Idx,
-    f7Idx,
-    g7Idx,
-    h7Idx,
-    a8Idx,
-    b8Idx,
-    c8Idx,
-    d8Idx,
-    e8Idx,
-    f8Idx,
-    g8Idx,
-    h8Idx,
+    a1_idx,
+    b1_idx,
+    c1_idx,
+    d1_idx,
+    e1_idx,
+    f1_idx,
+    g1_idx,
+    h1_idx,
+    a2_idx,
+    b2_idx,
+    c2_idx,
+    d2_idx,
+    e2_idx,
+    f2_idx,
+    g2_idx,
+    h2_idx,
+    a3_idx,
+    b3_idx,
+    c3_idx,
+    d3_idx,
+    e3_idx,
+    f3_idx,
+    g3_idx,
+    h3_idx,
+    a4_idx,
+    b4_idx,
+    c4_idx,
+    d4_idx,
+    e4_idx,
+    f4_idx,
+    g4_idx,
+    h4_idx,
+    a5_idx,
+    b5_idx,
+    c5_idx,
+    d5_idx,
+    e5_idx,
+    f5_idx,
+    g5_idx,
+    h5_idx,
+    a6_idx,
+    b6_idx,
+    c6_idx,
+    d6_idx,
+    e6_idx,
+    f6_idx,
+    g6_idx,
+    h6_idx,
+    a7_idx,
+    b7_idx,
+    c7_idx,
+    d7_idx,
+    e7_idx,
+    f7_idx,
+    g7_idx,
+    h7_idx,
+    a8_idx,
+    b8_idx,
+    c8_idx,
+    d8_idx,
+    e8_idx,
+    f8_idx,
+    g8_idx,
+    h8_idx,
 ]
 
 ## All squares a knight can move to from a certain square
-knightSquares = Dict.fromList [
-    # Rank 1
-    (a1Idx, [b3Idx, c2Idx]),
-    (b1Idx, [a3Idx, c3Idx, d2Idx]),
-    (c1Idx, [a2Idx, b3Idx, d3Idx, e2Idx]),
-    (d1Idx, [b2Idx, c3Idx, e3Idx, f2Idx]),
-    (e1Idx, [c2Idx, d3Idx, f3Idx, g2Idx]),
-    (f1Idx, [d2Idx, e3Idx, g3Idx, h2Idx]),
-    (g1Idx, [e2Idx, f3Idx, h3Idx]),
-    (h1Idx, [f2Idx, g3Idx]),
+knight_squares = Dict.from_list(
+    [
+        # Rank 1
+        (a1_idx, [b3_idx, c2_idx]),
+        (b1_idx, [a3_idx, c3_idx, d2_idx]),
+        (c1_idx, [a2_idx, b3_idx, d3_idx, e2_idx]),
+        (d1_idx, [b2_idx, c3_idx, e3_idx, f2_idx]),
+        (e1_idx, [c2_idx, d3_idx, f3_idx, g2_idx]),
+        (f1_idx, [d2_idx, e3_idx, g3_idx, h2_idx]),
+        (g1_idx, [e2_idx, f3_idx, h3_idx]),
+        (h1_idx, [f2_idx, g3_idx]),
 
-    # Rank 2
-    (a2Idx, [b4Idx, c3Idx, c1Idx]),
-    (b2Idx, [a4Idx, c4Idx, d3Idx, d1Idx]),
-    (c2Idx, [a1Idx, a3Idx, b4Idx, d4Idx, e3Idx, e1Idx]),
-    (d2Idx, [b1Idx, b3Idx, c4Idx, e4Idx, f3Idx, f1Idx]),
-    (e2Idx, [c1Idx, c3Idx, d4Idx, f4Idx, g3Idx, g1Idx]),
-    (f2Idx, [d1Idx, d3Idx, e4Idx, g4Idx, h3Idx, h1Idx]),
-    (g2Idx, [e1Idx, e3Idx, f4Idx, h4Idx]),
-    (h2Idx, [f1Idx, f3Idx, g4Idx]),
+        # Rank 2
+        (a2_idx, [b4_idx, c3_idx, c1_idx]),
+        (b2_idx, [a4_idx, c4_idx, d3_idx, d1_idx]),
+        (c2_idx, [a1_idx, a3_idx, b4_idx, d4_idx, e3_idx, e1_idx]),
+        (d2_idx, [b1_idx, b3_idx, c4_idx, e4_idx, f3_idx, f1_idx]),
+        (e2_idx, [c1_idx, c3_idx, d4_idx, f4_idx, g3_idx, g1_idx]),
+        (f2_idx, [d1_idx, d3_idx, e4_idx, g4_idx, h3_idx, h1_idx]),
+        (g2_idx, [e1_idx, e3_idx, f4_idx, h4_idx]),
+        (h2_idx, [f1_idx, f3_idx, g4_idx]),
 
-    # Rank 3
-    (a3Idx, [b5Idx, c4Idx, c2Idx, b1Idx]),
-    (b3Idx, [a1Idx, a5Idx, c5Idx, d4Idx, d2Idx, c1Idx]),
-    (c3Idx, [b1Idx, a2Idx, a4Idx, b5Idx, d5Idx, e4Idx, e2Idx, d1Idx]),
-    (d3Idx, [c1Idx, b2Idx, b4Idx, c5Idx, e5Idx, f4Idx, f2Idx, e1Idx]),
-    (e3Idx, [d1Idx, c2Idx, c4Idx, d5Idx, f5Idx, g4Idx, g2Idx, f1Idx]),
-    (f3Idx, [e1Idx, d2Idx, d4Idx, e5Idx, g5Idx, h4Idx, h2Idx, g1Idx]),
-    (g3Idx, [f1Idx, e2Idx, e4Idx, f5Idx, h5Idx, h1Idx]),
-    (h3Idx, [g1Idx, f2Idx, f4Idx, g5Idx]),
+        # Rank 3
+        (a3_idx, [b5_idx, c4_idx, c2_idx, b1_idx]),
+        (b3_idx, [a1_idx, a5_idx, c5_idx, d4_idx, d2_idx, c1_idx]),
+        (c3_idx, [b1_idx, a2_idx, a4_idx, b5_idx, d5_idx, e4_idx, e2_idx, d1_idx]),
+        (d3_idx, [c1_idx, b2_idx, b4_idx, c5_idx, e5_idx, f4_idx, f2_idx, e1_idx]),
+        (e3_idx, [d1_idx, c2_idx, c4_idx, d5_idx, f5_idx, g4_idx, g2_idx, f1_idx]),
+        (f3_idx, [e1_idx, d2_idx, d4_idx, e5_idx, g5_idx, h4_idx, h2_idx, g1_idx]),
+        (g3_idx, [f1_idx, e2_idx, e4_idx, f5_idx, h5_idx, h1_idx]),
+        (h3_idx, [g1_idx, f2_idx, f4_idx, g5_idx]),
 
-    # Rank 4
-    (a4Idx, [b6Idx, c5Idx, c3Idx, b2Idx]),
-    (b4Idx, [a2Idx, a6Idx, c6Idx, d5Idx, d3Idx, c2Idx]),
-    (c4Idx, [b2Idx, a3Idx, a5Idx, b6Idx, d6Idx, e5Idx, e3Idx, d2Idx]),
-    (d4Idx, [c2Idx, b3Idx, b5Idx, c6Idx, e6Idx, f5Idx, f3Idx, e2Idx]),
-    (e4Idx, [d2Idx, c3Idx, c5Idx, d6Idx, f6Idx, g5Idx, g3Idx, f2Idx]),
-    (f4Idx, [e2Idx, d3Idx, d5Idx, e6Idx, g6Idx, h5Idx, h3Idx, g2Idx]),
-    (g4Idx, [f2Idx, e3Idx, e5Idx, f6Idx, h6Idx, h2Idx]),
-    (h4Idx, [g2Idx, f3Idx, f5Idx, g6Idx]),
+        # Rank 4
+        (a4_idx, [b6_idx, c5_idx, c3_idx, b2_idx]),
+        (b4_idx, [a2_idx, a6_idx, c6_idx, d5_idx, d3_idx, c2_idx]),
+        (c4_idx, [b2_idx, a3_idx, a5_idx, b6_idx, d6_idx, e5_idx, e3_idx, d2_idx]),
+        (d4_idx, [c2_idx, b3_idx, b5_idx, c6_idx, e6_idx, f5_idx, f3_idx, e2_idx]),
+        (e4_idx, [d2_idx, c3_idx, c5_idx, d6_idx, f6_idx, g5_idx, g3_idx, f2_idx]),
+        (f4_idx, [e2_idx, d3_idx, d5_idx, e6_idx, g6_idx, h5_idx, h3_idx, g2_idx]),
+        (g4_idx, [f2_idx, e3_idx, e5_idx, f6_idx, h6_idx, h2_idx]),
+        (h4_idx, [g2_idx, f3_idx, f5_idx, g6_idx]),
 
-    # Rank 5
-    (a5Idx, [b7Idx, c6Idx, c4Idx, b3Idx]),
-    (b5Idx, [a3Idx, a7Idx, c7Idx, d6Idx, d4Idx, c3Idx]),
-    (c5Idx, [b3Idx, a4Idx, a6Idx, b7Idx, d7Idx, e6Idx, e4Idx, d3Idx]),
-    (d5Idx, [c3Idx, b4Idx, b6Idx, c7Idx, e7Idx, f6Idx, f4Idx, e3Idx]),
-    (e5Idx, [d3Idx, c4Idx, c6Idx, d7Idx, f7Idx, g6Idx, g4Idx, f3Idx]),
-    (f5Idx, [e3Idx, d4Idx, d6Idx, e7Idx, g7Idx, h6Idx, h4Idx, g3Idx]),
-    (g5Idx, [f3Idx, e4Idx, e6Idx, f7Idx, h7Idx, h3Idx]),
-    (h5Idx, [g3Idx, f4Idx, f6Idx, g7Idx]),
+        # Rank 5
+        (a5_idx, [b7_idx, c6_idx, c4_idx, b3_idx]),
+        (b5_idx, [a3_idx, a7_idx, c7_idx, d6_idx, d4_idx, c3_idx]),
+        (c5_idx, [b3_idx, a4_idx, a6_idx, b7_idx, d7_idx, e6_idx, e4_idx, d3_idx]),
+        (d5_idx, [c3_idx, b4_idx, b6_idx, c7_idx, e7_idx, f6_idx, f4_idx, e3_idx]),
+        (e5_idx, [d3_idx, c4_idx, c6_idx, d7_idx, f7_idx, g6_idx, g4_idx, f3_idx]),
+        (f5_idx, [e3_idx, d4_idx, d6_idx, e7_idx, g7_idx, h6_idx, h4_idx, g3_idx]),
+        (g5_idx, [f3_idx, e4_idx, e6_idx, f7_idx, h7_idx, h3_idx]),
+        (h5_idx, [g3_idx, f4_idx, f6_idx, g7_idx]),
 
-    # Rank 6
-    (a6Idx, [b8Idx, c7Idx, c5Idx, b4Idx]),
-    (b6Idx, [a4Idx, a8Idx, c8Idx, d7Idx, d5Idx, c4Idx]),
-    (c6Idx, [b4Idx, a5Idx, a7Idx, b8Idx, d8Idx, e7Idx, e5Idx, d4Idx]),
-    (d6Idx, [c4Idx, b5Idx, b7Idx, c8Idx, e8Idx, f7Idx, f5Idx, e4Idx]),
-    (e6Idx, [d4Idx, c5Idx, c7Idx, d8Idx, f8Idx, g7Idx, g5Idx, f4Idx]),
-    (f6Idx, [e4Idx, d5Idx, d7Idx, e8Idx, g8Idx, h7Idx, h5Idx, g4Idx]),
-    (g6Idx, [f4Idx, e5Idx, e7Idx, f8Idx, h8Idx, h4Idx]),
-    (h6Idx, [g4Idx, f5Idx, f7Idx, g8Idx]),
+        # Rank 6
+        (a6_idx, [b8_idx, c7_idx, c5_idx, b4_idx]),
+        (b6_idx, [a4_idx, a8_idx, c8_idx, d7_idx, d5_idx, c4_idx]),
+        (c6_idx, [b4_idx, a5_idx, a7_idx, b8_idx, d8_idx, e7_idx, e5_idx, d4_idx]),
+        (d6_idx, [c4_idx, b5_idx, b7_idx, c8_idx, e8_idx, f7_idx, f5_idx, e4_idx]),
+        (e6_idx, [d4_idx, c5_idx, c7_idx, d8_idx, f8_idx, g7_idx, g5_idx, f4_idx]),
+        (f6_idx, [e4_idx, d5_idx, d7_idx, e8_idx, g8_idx, h7_idx, h5_idx, g4_idx]),
+        (g6_idx, [f4_idx, e5_idx, e7_idx, f8_idx, h8_idx, h4_idx]),
+        (h6_idx, [g4_idx, f5_idx, f7_idx, g8_idx]),
 
-    # Rank 7
-    (a7Idx, [c8Idx, c6Idx, b5Idx]),
-    (b7Idx, [d8Idx, d6Idx, c5Idx, a5Idx]),
-    (c7Idx, [b5Idx, a6Idx, a8Idx, e8Idx, e6Idx, d5Idx]),
-    (d7Idx, [c5Idx, b6Idx, b8Idx, f8Idx, f6Idx, e5Idx]),
-    (e7Idx, [d5Idx, c6Idx, c8Idx, g8Idx, g6Idx, f5Idx]),
-    (f7Idx, [e5Idx, d6Idx, d8Idx, h8Idx, h6Idx, g5Idx]),
-    (g7Idx, [f5Idx, e6Idx, e8Idx, h5Idx]),
-    (h7Idx, [g5Idx, f6Idx, f8Idx]),
+        # Rank 7
+        (a7_idx, [c8_idx, c6_idx, b5_idx]),
+        (b7_idx, [d8_idx, d6_idx, c5_idx, a5_idx]),
+        (c7_idx, [b5_idx, a6_idx, a8_idx, e8_idx, e6_idx, d5_idx]),
+        (d7_idx, [c5_idx, b6_idx, b8_idx, f8_idx, f6_idx, e5_idx]),
+        (e7_idx, [d5_idx, c6_idx, c8_idx, g8_idx, g6_idx, f5_idx]),
+        (f7_idx, [e5_idx, d6_idx, d8_idx, h8_idx, h6_idx, g5_idx]),
+        (g7_idx, [f5_idx, e6_idx, e8_idx, h5_idx]),
+        (h7_idx, [g5_idx, f6_idx, f8_idx]),
 
-    # Rank 8
-    (a8Idx, [c7Idx, b6Idx]),
-    (b8Idx, [a6Idx, d7Idx, c6Idx]),
-    (c8Idx, [b6Idx, a7Idx, e7Idx, d6Idx]),
-    (d8Idx, [c6Idx, b7Idx, f7Idx, e6Idx]),
-    (e8Idx, [d6Idx, c7Idx, g7Idx, f6Idx]),
-    (f8Idx, [e6Idx, d7Idx, h7Idx, g6Idx]),
-    (g8Idx, [f6Idx, e7Idx, h6Idx]),
-    (h8Idx, [g6Idx, f7Idx]),
-]
+        # Rank 8
+        (a8_idx, [c7_idx, b6_idx]),
+        (b8_idx, [a6_idx, d7_idx, c6_idx]),
+        (c8_idx, [b6_idx, a7_idx, e7_idx, d6_idx]),
+        (d8_idx, [c6_idx, b7_idx, f7_idx, e6_idx]),
+        (e8_idx, [d6_idx, c7_idx, g7_idx, f6_idx]),
+        (f8_idx, [e6_idx, d7_idx, h7_idx, g6_idx]),
+        (g8_idx, [f6_idx, e7_idx, h6_idx]),
+        (h8_idx, [g6_idx, f7_idx]),
+    ],
+)
 
-generateMoves : Board, Bitboard, Bitboard -> List Move
-generateMoves = \board, myPieces, theirPieces ->
+generate_moves : Board, Bitboard, Bitboard -> List Move
+generate_moves = |board, my_pieces, their_pieces|
     # Find from squares
-    knights = bitwiseAnd myPieces board.knight
-    knightIdxs = Board.bbToIdxs knights
+    knights = bitwise_and(my_pieces, board.knight)
+    knight_idxs = Board.bb_to_idxs(knights)
     # For each from square, create a knight move
-    List.walk knightIdxs [] \list, idx ->
-        List.concat list (generateMovesFromSquare board myPieces theirPieces idx)
+    List.walk(
+        knight_idxs,
+        [],
+        |list, idx|
+            List.concat(list, generate_moves_from_square(board, my_pieces, their_pieces, idx)),
+    )
 
 expect
-    moves = generateMoves initialBoard initialBoard.white initialBoard.black |> toStr
-    Set.fromList moves == Set.fromList ["b1a3", "b1c3", "g1f3", "g1h3"]
+    moves = generate_moves(initial_board, initial_board.white, initial_board.black) |> to_str
+    Set.from_list(moves) == Set.from_list(["b1a3", "b1c3", "g1f3", "g1h3"])
 
-generateMovesFromSquare : Board, Bitboard, Bitboard, SquareIdx -> List Move
-generateMovesFromSquare = \board, myPieces, theirPieces, fromIdx ->
-    when Dict.get knightSquares fromIdx is
-        Ok toIdxs ->
+generate_moves_from_square : Board, Bitboard, Bitboard, SquareIdx -> List Move
+generate_moves_from_square = |board, my_pieces, their_pieces, from_idx|
+    when Dict.get(knight_squares, from_idx) is
+        Ok(to_idxs) ->
             # Remove squares occupied by my pieces and create moves
-            toIdxs
-            |> List.keepIf \toIdx ->
-                toId = Square.idxToId toIdx
-                bitwiseAnd myPieces toId == 0
-            |> List.map \toIdx ->
-                createMove board theirPieces fromIdx toIdx
+            to_idxs
+            |> List.keep_if(
+                |to_idx|
+                    to_id = Square.idx_to_id(to_idx)
+                    bitwise_and(my_pieces, to_id) == 0,
+            )
+            |> List.map(
+                |to_idx|
+                    create_move(board, their_pieces, from_idx, to_idx),
+            )
 
-        Err _ -> crash "Should not happen: fromIdx not found: $(Num.toStr fromIdx)"
+        Err(_) -> crash("Should not happen: fromIdx not found: ${Num.to_str(from_idx)}")
 
 # Initial position White
 expect
-    moves = generateMovesFromSquare initialBoard initialBoard.white initialBoard.black g1Idx |> toStr
-    Set.fromList moves == Set.fromList ["g1f3", "g1h3"]
+    moves = generate_moves_from_square(initial_board, initial_board.white, initial_board.black, g1_idx) |> to_str
+    Set.from_list(moves) == Set.from_list(["g1f3", "g1h3"])
 # Initial position Black
 expect
-    moves = generateMovesFromSquare initialBoard initialBoard.black initialBoard.white b8Idx |> toStr
-    Set.fromList moves == Set.fromList ["b8a6", "b8c6"]
+    moves = generate_moves_from_square(initial_board, initial_board.black, initial_board.white, b8_idx) |> to_str
+    Set.from_list(moves) == Set.from_list(["b8a6", "b8c6"])
 
-createMove : Board, Bitboard, SquareIdx, SquareIdx -> Move
-createMove = \board, theirPieces, fromIdx, toIdx ->
-    toId = Square.idxToId toIdx
-    if bitwiseAnd theirPieces toId != 0 then
-        captured = Board.pieceAt board toId
-        Move.createCapture fromIdx toIdx Piece.knight captured
+create_move : Board, Bitboard, SquareIdx, SquareIdx -> Move
+create_move = |board, their_pieces, from_idx, to_idx|
+    to_id = Square.idx_to_id(to_idx)
+    if bitwise_and(their_pieces, to_id) != 0 then
+        captured = Board.piece_at(board, to_id)
+        Move.create_capture(from_idx, to_idx, Piece.knight, captured)
     else
-        Move.create fromIdx toIdx Piece.knight
+        Move.create(from_idx, to_idx, Piece.knight)
 
 # ----------------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------------
 
-toStr : List Move -> List Str
-toStr = \moves ->
-    List.map moves \move -> Move.toStr move
+to_str : List Move -> List Str
+to_str = |moves|
+    List.map(moves, |move| Move.to_str(move))
