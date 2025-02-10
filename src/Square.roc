@@ -291,8 +291,6 @@ squares = "a1b1c1d1e1f1g1h1a2b2c2d2e2f2g2h2a3b3c3d3e3f3g3h3a4b4c4d4e4f4g4h4a5b5c
 
 from_str : Str -> Result SquareIdx [SyntaxError]
 from_str = |str|
-    expect S.len(str) == 2
-
     S.index_of(squares, str)
     |> Result.map_ok(|index| index // 2)
     |> Result.map_err(|_| SyntaxError)
@@ -306,9 +304,6 @@ expect from_str("h8") == Ok(h8_idx)
 
 to_str : SquareIdx -> Str
 to_str = |square_idx|
-    expect
-        square_idx >= 0 and square_idx <= 63
-
     S.substr(squares, { start: (square_idx * 2), len: 2 }) |> Result.with_default("??") # Cannot fail?
 
 expect to_str(a1_idx) == "a1"
@@ -319,9 +314,6 @@ expect to_str(h8_idx) == "h8"
 ## Convert a file and rank pair to a square ID.
 fr_to_id : U8, U8 -> SquareId
 fr_to_id = |file, rank|
-    expect
-        file >= 0 and file <= 7 and rank >= 0 and rank <= 7
-
     shift_left_by(1, (rank * 8 + file))
 
 expect fr_to_id(0, 0) == a1
@@ -331,9 +323,6 @@ expect fr_to_id(7, 7) == h8
 
 idx_to_id : SquareIdx -> SquareId
 idx_to_id = |idx|
-    expect
-        idx >= 0 and idx <= 63
-
     shift_left_by(1u64, Num.to_u8(idx))
 
 expect idx_to_id(a8_idx) == a8

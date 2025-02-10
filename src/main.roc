@@ -72,7 +72,7 @@ loop! = |game|
     args = List.sublist(parts, { start: 1, len: Num.max_u64 })
     when List.first(parts) is
         Ok(cmd) if cmd == "quit" ->
-            OK({})
+            Ok({})
 
         Ok(cmd) ->
             start_time = Utc.now!({})
@@ -90,16 +90,10 @@ loop! = |game|
         Err(ListWasEmpty) ->
             Err(ListWasEmpty)
 
-run! = |_|
+main! = |_|
     Stdout.line!("# Welcome to rocky ${Str.trim(version)}")?
     Stdout.line!("# Type 'help' to get help")?
     result = loop!(initial_game)
-    Stdout.line!("# Bye")?
-    result
-
-main! = |args|
-    run! args
-    |> |err|
-        when err is
-            StdinErr(EndOfFile) -> Stdout.line!("")
-            _ -> Stderr.line!("Error: ${Inspect.to_str(err)}")
+    when result is
+        Ok(_) | Err(EndOfFile) -> Stdout.line!("# Bye")
+        _ -> Stderr.line!("Error: ${Inspect.to_str(result)}")

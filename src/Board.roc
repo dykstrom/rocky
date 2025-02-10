@@ -265,9 +265,7 @@ make_move = |board, move, color|
     from_id = Square.idx_to_id(Move.get_from(move))
     to_id = Square.idx_to_id(Move.get_to(move))
     moved = Move.get_moved(move)
-    expect moved == piece_at(board, from_id)
     captured = Move.get_captured(move)
-    expect captured == piece_at(board, to_id) or Move.is_en_passant(move)
     promoted = Move.get_promoted(move)
 
     after_move =

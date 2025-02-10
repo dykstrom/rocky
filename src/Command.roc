@@ -154,9 +154,6 @@ otim_cmd = |game, _args|
 
 # ----------------------------------------------------------------------------
 
-# TODO: Change all command to return a tuple of (Game, Str) like roc format almost
-# changed it into.
-
 ping_cmd : Game, List Str -> Result (Game, Str) _
 ping_cmd = |game, args|
     when args is
