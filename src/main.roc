@@ -94,7 +94,7 @@ print! = |s|
     if Str.is_empty(s) then
         Ok({})
     else
-        Stdout.line!(Str.trim(s))
+        Stdout.line!(Str.trim_end(s))
 
 main! = |_|
     Stdout.line!("# Welcome to rocky ${Str.trim(version)}")?
