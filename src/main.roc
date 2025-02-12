@@ -83,12 +83,18 @@ loop! = |game|
             msg_after_move = tuple.1
             time_left = tuple.0.time_left - run_time
             final_game = { game_after_move & time_left: time_left }
-            Stdout.line!(msg_after_move)?
-            Stdout.line!(Util.debug(final_game, "Executed '${input}' in ${format_time(run_time)}, time left: ${format_time(time_left)}"))?
+            print!(msg_after_move)?
+            print!(Util.debug(final_game, "Executed '${input}' in ${format_time(run_time)}, time left: ${format_time(time_left)}"))?
             loop!(final_game)
 
         Err(ListWasEmpty) ->
             Err(ListWasEmpty)
+
+print! = |s|
+    if Str.is_empty(s) then
+        Ok({})
+    else
+        Stdout.line!(Str.trim(s))
 
 main! = |_|
     Stdout.line!("# Welcome to rocky ${Str.trim(version)}")?
