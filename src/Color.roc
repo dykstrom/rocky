@@ -1,10 +1,10 @@
-module [Color, flipColor]
+module [Color, flip_color]
 
 Color : [White, Black]
 
-flipColor : Color -> Color
-flipColor = \color ->
+flip_color : Color -> Color
+flip_color = |color|
     if color == White then Black else White
 
-expect flipColor White == Black
-expect flipColor Black == White
+expect flip_color(White) == Black
+expect flip_color(Black) == White

@@ -1,103 +1,103 @@
-module [evaluate, illegalCheckValue, checkmateValue, drawValue]
+module [evaluate, illegal_check_value, checkmate_value, draw_value]
 
-import Board exposing [Bitboard, Board, initialBoard]
+import Board exposing [Bitboard, Board, initial_board]
 import Checker
 import Color exposing [Color]
 import L
 import MoveGenerator
-import Num exposing [bitwiseAnd, bitwiseXor]
+import Num exposing [bitwise_and, bitwise_xor]
 import Square exposing [a1, f5, h8]
 import Util
 
-bishopValue = 3_000
-knightValue = 3_000
-queenValue = 9_000
-pawnValue = 1_000
-rookValue = 5_000
+bishop_value = 3_000
+knight_value = 3_000
+queen_value = 9_000
+pawn_value = 1_000
+rook_value = 5_000
 
-checkValue = 100
-mobilityValue = 10
-illegalCheckValue = -100_000
-checkmateValue = -illegalCheckValue
-drawValue = 0
+check_value = 100
+mobility_value = 10
+illegal_check_value = -100_000
+checkmate_value = -illegal_check_value
+draw_value = 0
 
 ## Evaluate the given board and calculate the score for the given color.
 ## The score will be positive if the given color is in the lead.
 evaluate : Board, Color -> I64
-evaluate = \board, color ->
-    mobilityScore = evaluateMobility board
-    checkScore = evaluateCheck board color
-    materialScore = evaluateMaterial board
-    (if color == White then mobilityScore else -mobilityScore)
-    + checkScore
-    + (if color == White then materialScore else -materialScore)
+evaluate = |board, color|
+    mobility_score = evaluate_mobility(board)
+    check_score = evaluate_check(board, color)
+    material_score = evaluate_material(board)
+    (if color == White then mobility_score else -mobility_score)
+    + check_score
+    + (if color == White then material_score else -material_score)
 
 # Initial position
 expect
-    boardWithMoves = MoveGenerator.withMoves initialBoard
-    evaluate boardWithMoves White == 0
+    board_with_moves = MoveGenerator.with_moves(initial_board)
+    evaluate(board_with_moves, White) == 0
 expect
-    boardWithMoves = MoveGenerator.withMoves initialBoard
-    evaluate boardWithMoves Black == 0
+    board_with_moves = MoveGenerator.with_moves(initial_board)
+    evaluate(board_with_moves, Black) == 0
 # Equal position
 expect
-    board = Util.withMoves initialBoard ["e2e4", "e7e5"] White
-    boardWithMoves = MoveGenerator.withMoves board
-    evaluate boardWithMoves Black == 0
+    board = Util.with_moves(initial_board, ["e2e4", "e7e5"], White)
+    board_with_moves = MoveGenerator.with_moves(board)
+    evaluate(board_with_moves, Black) == 0
 # White is a rook down
 expect
-    board = { initialBoard &
-        white: bitwiseXor initialBoard.white a1,
-        rook: bitwiseXor initialBoard.rook a1,
+    board = { initial_board &
+        white: bitwise_xor(initial_board.white, a1),
+        rook: bitwise_xor(initial_board.rook, a1),
     }
-    boardWithMoves = MoveGenerator.withMoves board
-    evaluate boardWithMoves White == -rookValue
+    board_with_moves = MoveGenerator.with_moves(board)
+    evaluate(board_with_moves, White) == (-rook_value)
 # White is checked but not checkmated (he can escape to e2)
 expect
-    board = Util.withMoves initialBoard ["f2f3", "e7e5", "e2e4", "d8h4"] White
-    boardWithMoves = MoveGenerator.withMoves board
-    evaluate boardWithMoves Black > 0
+    board = Util.with_moves(initial_board, ["f2f3", "e7e5", "e2e4", "d8h4"], White)
+    board_with_moves = MoveGenerator.with_moves(board)
+    evaluate(board_with_moves, Black) > 0
 # White is checkmated, but we only know that White is checked
 expect
-    board = Util.withMoves initialBoard ["f2f3", "e7e5", "g2g4", "d8h4"] White
-    boardWithMoves = MoveGenerator.withMoves board
-    evaluate boardWithMoves Black > 0
+    board = Util.with_moves(initial_board, ["f2f3", "e7e5", "g2g4", "d8h4"], White)
+    board_with_moves = MoveGenerator.with_moves(board)
+    evaluate(board_with_moves, Black) > 0
 
 ## Return a small positive score if opponent is in check.
-evaluateCheck : Board, Color -> I64
-evaluateCheck = \board, color ->
-    if Checker.isCheck board (Color.flipColor color) then checkValue else 0
+evaluate_check : Board, Color -> I64
+evaluate_check = |board, color|
+    if Checker.is_check(board, Color.flip_color(color)) then check_value else 0
 
 ## Evaluate mobility. The score will be positive if White is in the lead.
-evaluateMobility : Board -> I64
-evaluateMobility = \board ->
-    (Num.toI64 (List.len board.whiteMoves) - Num.toI64 (List.len board.blackMoves)) * mobilityValue
+evaluate_mobility : Board -> I64
+evaluate_mobility = |board|
+    (Num.to_i64(List.len(board.white_moves)) - Num.to_i64(List.len(board.black_moves))) * mobility_value
 
 ## Evaluate material on the board. The score will be positive if White is in the lead.
-evaluateMaterial : Board -> I64
-evaluateMaterial = \board ->
-    (popCount (bitwiseAnd board.white board.bishop) * bishopValue)
-    + (popCount (bitwiseAnd board.white board.knight) * knightValue)
-    + (popCount (bitwiseAnd board.white board.pawn) * pawnValue)
-    + (popCount (bitwiseAnd board.white board.queen) * queenValue)
-    + (popCount (bitwiseAnd board.white board.rook) * rookValue)
-    - (popCount (bitwiseAnd board.black board.bishop) * bishopValue)
-    - (popCount (bitwiseAnd board.black board.knight) * knightValue)
-    - (popCount (bitwiseAnd board.black board.pawn) * pawnValue)
-    - (popCount (bitwiseAnd board.black board.queen) * queenValue)
-    - (popCount (bitwiseAnd board.black board.rook) * rookValue)
+evaluate_material : Board -> I64
+evaluate_material = |board|
+    (pop_count(bitwise_and(board.white, board.bishop)) * bishop_value)
+    + (pop_count(bitwise_and(board.white, board.knight)) * knight_value)
+    + (pop_count(bitwise_and(board.white, board.pawn)) * pawn_value)
+    + (pop_count(bitwise_and(board.white, board.queen)) * queen_value)
+    + (pop_count(bitwise_and(board.white, board.rook)) * rook_value)
+    - (pop_count(bitwise_and(board.black, board.bishop)) * bishop_value)
+    - (pop_count(bitwise_and(board.black, board.knight)) * knight_value)
+    - (pop_count(bitwise_and(board.black, board.pawn)) * pawn_value)
+    - (pop_count(bitwise_and(board.black, board.queen)) * queen_value)
+    - (pop_count(bitwise_and(board.black, board.rook)) * rook_value)
 
-popCount : Bitboard -> I64
-popCount = \bitboard ->
-    Num.toI64 (Num.countOneBits bitboard)
+pop_count : Bitboard -> I64
+pop_count = |bitboard|
+    Num.to_i64(Num.count_one_bits(bitboard))
 
-expect popCount 0 == 0
-expect popCount 1 == 1
-expect popCount 2 == 1
-expect popCount 3 == 2
-expect popCount 4 == 1
-expect popCount 7 == 3
-expect popCount h8 == 1
-expect popCount (L.or [a1, f5, h8]) == 3
-expect popCount initialBoard.white == 16
-expect popCount initialBoard.bishop == 4
+expect pop_count(0) == 0
+expect pop_count(1) == 1
+expect pop_count(2) == 1
+expect pop_count(3) == 2
+expect pop_count(4) == 1
+expect pop_count(7) == 3
+expect pop_count(h8) == 1
+expect pop_count(L.or_list([a1, f5, h8])) == 3
+expect pop_count(initial_board.white) == 16
+expect pop_count(initial_board.bishop) == 4

@@ -1,4 +1,4 @@
-module [TimeControl, initialTimeControl, allocateTimeForMove, formatTime, parseTimeControl]
+module [TimeControl, initial_time_control, allocate_time_for_move, format_time, parse_time_control]
 
 TimeControl : {
     type : [Classic, Incremental],
@@ -7,87 +7,87 @@ TimeControl : {
     inc : I128,
 }
 
-initialTimeControl : TimeControl
-initialTimeControl = {
+initial_time_control : TimeControl
+initial_time_control = {
     type: Classic,
     moves: 40,
     base: 120_000,
     inc: 0,
 }
 
-parseTimeControl : Str, Str, Str -> Result TimeControl [SyntaxError]
-parseTimeControl = \mps, base, inc ->
-    when [parseMps mps, parseBase base, parseInc inc] is
-        [Ok moves, Ok baseTime, Ok increment] ->
+parse_time_control : Str, Str, Str -> Result TimeControl [SyntaxError]
+parse_time_control = |mps, base, inc|
+    when [parse_mps(mps), parse_base(base), parse_inc(inc)] is
+        [Ok(moves), Ok(base_time), Ok(increment)] ->
             if moves != 0 then
-                Ok { type: Classic, moves: moves, base: baseTime, inc: 0 }
+                Ok({ type: Classic, moves: moves, base: base_time, inc: 0 })
             else
-                Ok { type: Incremental, moves: 0, base: baseTime, inc: increment }
+                Ok({ type: Incremental, moves: 0, base: base_time, inc: increment })
 
         _ ->
-            Err SyntaxError
+            Err(SyntaxError)
 
-expect parseTimeControl "20" "5" "0" == Ok { type: Classic, moves: 20, base: 300_000, inc: 0 }
-expect parseTimeControl "17" "0:15" "0" == Ok { type: Classic, moves: 17, base: 15_000, inc: 0 }
-expect parseTimeControl "0" "2" "10" == Ok { type: Incremental, moves: 0, base: 120_000, inc: 10_000 }
+expect parse_time_control("20", "5", "0") == Ok({ type: Classic, moves: 20, base: 300_000, inc: 0 })
+expect parse_time_control("17", "0:15", "0") == Ok({ type: Classic, moves: 17, base: 15_000, inc: 0 })
+expect parse_time_control("0", "2", "10") == Ok({ type: Incremental, moves: 0, base: 120_000, inc: 10_000 })
 
 ## Return number of moves per time control.
-parseMps = \mps ->
-    Str.toI128 mps
+parse_mps = |mps|
+    Str.to_i128(mps)
 
-expect parseMps "20" == Ok 20
+expect parse_mps("20") == Ok(20)
 
 ## Return base time in millis.
-parseBase = \base ->
-    parts = Str.splitOn base ":"
-    if List.isEmpty parts then
-        Err SyntaxError
+parse_base = |base|
+    parts = Str.split_on(base, ":")
+    if List.is_empty(parts) then
+        Err(SyntaxError)
     else
         m1 =
-            List.get parts 0
-            |> Result.try \m -> Str.toI128 m
-            |> Result.map \minutes -> minutes * 60_000
-            |> Result.withDefault 0
+            List.get(parts, 0)
+            |> Result.try(Str.to_i128)
+            |> Result.map_ok(|minutes| minutes * 60_000)
+            |> Result.with_default(0)
         s1 =
-            if List.len parts > 1 then
-                List.get parts 1
-                |> Result.try \s -> Str.toI128 s
-                |> Result.map \seconds -> seconds * 1_000
-                |> Result.withDefault 0
+            if List.len(parts) > 1 then
+                List.get(parts, 1)
+                |> Result.try(Str.to_i128)
+                |> Result.map_ok(|seconds| seconds * 1_000)
+                |> Result.with_default(0)
             else
                 0i128
-        Ok (m1 + s1)
+        Ok(m1 + s1)
 
-expect parseBase "10" == Ok 600_000
-expect parseBase "1:30" == Ok 90_000
+expect parse_base("10") == Ok(600_000)
+expect parse_base("1:30") == Ok(90_000)
 
 ## Return time increment in millis.
-parseInc = \inc ->
-    Str.toI128 inc
-    |> Result.map \seconds -> seconds * 1_000
+parse_inc = |inc|
+    Str.to_i128(inc)
+    |> Result.map_ok(|seconds| seconds * 1_000)
 
-expect parseInc "3" == Ok 3_000
+expect parse_inc("3") == Ok(3_000)
 
 ## Returns the time to use for this move.
-allocateTimeForMove : TimeControl, I128, I128 -> I128
-allocateTimeForMove = \timeControl, timeLeft, movesLeft ->
-    if timeControl.type == Classic then
-        if movesLeft == 0 then
-            crash "Should not happen: movesLeft = 0! Time left: $(formatTime timeLeft), time control: $(Inspect.toStr timeControl)"
-        else if movesLeft == 1 then
+allocate_time_for_move : TimeControl, I128, I128 -> I128
+allocate_time_for_move = |time_control, time_left, moves_left|
+    if time_control.type == Classic then
+        if moves_left == 0 then
+            crash("Should not happen: movesLeft = 0! Time left: ${format_time(time_left)}, time control: ${Inspect.to_str(time_control)}")
+        else if moves_left == 1 then
             # If this is the last move before the time control,
             # be conservative about the time to use
-            timeLeft // 2
+            time_left // 2
         else
-            timeLeft // movesLeft
+            time_left // moves_left
     else
         # For incremental time control, assume there are 40 moves left
-        timeLeft // 40 + timeControl.inc
+        time_left // 40 + time_control.inc
 
-expect allocateTimeForMove initialTimeControl 80_000 20 == 4_000
-expect allocateTimeForMove initialTimeControl 80_000 1 == 40_000
-expect allocateTimeForMove { type: Incremental, base: 40_000, inc: 1_000, moves: 0 } 8_000 0 == 1_200
+expect allocate_time_for_move(initial_time_control, 80_000, 20) == 4_000
+expect allocate_time_for_move(initial_time_control, 80_000, 1) == 40_000
+expect allocate_time_for_move({ type: Incremental, base: 40_000, inc: 1_000, moves: 0 }, 8_000, 0) == 1_200
 
-formatTime : I128 -> Str
-formatTime = \timeInMs ->
-    "$(Num.toStr (Num.toF64 timeInMs / 1_000))s"
+format_time : I128 -> Str
+format_time = |time_in_ms|
+    "${Num.to_str((Num.to_f64(time_in_ms) / 1_000))}s"

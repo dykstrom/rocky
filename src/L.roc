@@ -1,7 +1,7 @@
-module [or]
+module [or_list]
 
-or : List U64 -> U64
-or = \list ->
-    List.walk list 0 Num.bitwiseOr
+or_list : List U64 -> U64
+or_list = |list|
+    List.walk list 0 Num.bitwise_or
 
-expect or [1, 2, 4] == 7
+expect or_list [1, 2, 4] == 7

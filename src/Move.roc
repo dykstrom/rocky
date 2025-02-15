@@ -1,19 +1,19 @@
 module [
     Move,
     create,
-    createCastling,
-    createCapture,
-    createCapturePromotion,
-    createPromotion,
-    createEnPassant,
-    getFrom,
-    getTo,
-    getMoved,
-    getCaptured,
-    getPromoted,
-    isCastling,
-    isEnPassant,
-    toStr,
+    create_castling,
+    create_capture,
+    create_capture_promotion,
+    create_promotion,
+    create_en_passant,
+    get_from,
+    get_to,
+    get_moved,
+    get_captured,
+    get_promoted,
+    is_castling,
+    is_en_passant,
+    to_str,
     a2a3,
     a2a4,
     a7a5,
@@ -70,69 +70,69 @@ module [
     ng8f6,
 ]
 
-import Num exposing [bitwiseAnd, bitwiseOr, shiftLeftBy, shiftRightZfBy]
+import Num exposing [bitwise_and, bitwise_or, shift_left_by, shift_right_zf_by]
 import Piece exposing [PieceIdx]
 import Square exposing [
     SquareIdx,
-    a2Idx,
-    a3Idx,
-    a4Idx,
-    a5Idx,
-    a6Idx,
-    a7Idx,
-    a8Idx,
-    b1Idx,
-    b2Idx,
-    b3Idx,
-    b4Idx,
-    b5Idx,
-    b6Idx,
-    b7Idx,
-    b8Idx,
-    c2Idx,
-    c3Idx,
-    c4Idx,
-    c5Idx,
-    c6Idx,
-    c7Idx,
-    d1Idx,
-    d2Idx,
-    d3Idx,
-    d4Idx,
-    d5Idx,
-    d6Idx,
-    d7Idx,
-    d8Idx,
-    e1Idx,
-    e2Idx,
-    e3Idx,
-    e4Idx,
-    e5Idx,
-    e6Idx,
-    e7Idx,
-    f1Idx,
-    f2Idx,
-    f3Idx,
-    f4Idx,
-    f5Idx,
-    f6Idx,
-    f7Idx,
-    f8Idx,
-    g1Idx,
-    g2Idx,
-    g3Idx,
-    g4Idx,
-    g5Idx,
-    g6Idx,
-    g7Idx,
-    g8Idx,
-    h2Idx,
-    h3Idx,
-    h4Idx,
-    h5Idx,
-    h6Idx,
-    h7Idx,
-    h8Idx,
+    a2_idx,
+    a3_idx,
+    a4_idx,
+    a5_idx,
+    a6_idx,
+    a7_idx,
+    a8_idx,
+    b1_idx,
+    b2_idx,
+    b3_idx,
+    b4_idx,
+    b5_idx,
+    b6_idx,
+    b7_idx,
+    b8_idx,
+    c2_idx,
+    c3_idx,
+    c4_idx,
+    c5_idx,
+    c6_idx,
+    c7_idx,
+    d1_idx,
+    d2_idx,
+    d3_idx,
+    d4_idx,
+    d5_idx,
+    d6_idx,
+    d7_idx,
+    d8_idx,
+    e1_idx,
+    e2_idx,
+    e3_idx,
+    e4_idx,
+    e5_idx,
+    e6_idx,
+    e7_idx,
+    f1_idx,
+    f2_idx,
+    f3_idx,
+    f4_idx,
+    f5_idx,
+    f6_idx,
+    f7_idx,
+    f8_idx,
+    g1_idx,
+    g2_idx,
+    g3_idx,
+    g4_idx,
+    g5_idx,
+    g6_idx,
+    g7_idx,
+    g8_idx,
+    h2_idx,
+    h3_idx,
+    h4_idx,
+    h5_idx,
+    h6_idx,
+    h7_idx,
+    h8_idx,
 ]
 
 Move : U64
@@ -146,192 +146,192 @@ Move : U64
 # - Bit 11-13 - promoted piece
 # - Bit 14-16 - captured piece
 
-fromOffset = 0x06u8
-movedOffset = 0x0cu8
-promotedOffset = 0x11u8
-capturedOffset = 0x14u8
+from_offset = 0x06u8
+moved_offset = 0x0cu8
+promoted_offset = 0x11u8
+captured_offset = 0x14u8
 
-pieceMask = 0x07u64
-squareMask = 0x3fu64
-castleMask = shiftLeftBy 0x01u64 0x0f
-enPassantMask = shiftLeftBy 0x01u64 0x10
+piece_mask = 0x07u64
+square_mask = 0x3fu64
+castle_mask = shift_left_by(0x01u64, 0x0f)
+en_passant_mask = shift_left_by(0x01u64, 0x10)
 
-capturedPawn = shiftLeftBy Piece.pawn capturedOffset
+captured_pawn = shift_left_by(Piece.pawn, captured_offset)
 
-movedKing = shiftLeftBy Piece.king movedOffset
-movedPawn = shiftLeftBy Piece.pawn movedOffset
+moved_king = shift_left_by(Piece.king, moved_offset)
+moved_pawn = shift_left_by(Piece.pawn, moved_offset)
 
 # Test moves
-a2a3 = create a2Idx a3Idx Piece.pawn
-a2a4 = create a2Idx a4Idx Piece.pawn
-a7a5 = create a7Idx a5Idx Piece.pawn
-a7a6 = create a7Idx a6Idx Piece.pawn
-a7a8q = createPromotion a7Idx a8Idx Piece.queen
-b2b3 = create b2Idx b3Idx Piece.pawn
-b2b4 = create b2Idx b4Idx Piece.pawn
-b7b5 = create b7Idx b5Idx Piece.pawn
-b7b6 = create b7Idx b6Idx Piece.pawn
-c2c3 = create c2Idx c3Idx Piece.pawn
-c2c4 = create c2Idx c4Idx Piece.pawn
-c7c5 = create c7Idx c5Idx Piece.pawn
-c7c6 = create c7Idx c6Idx Piece.pawn
-d1h5 = create d1Idx h5Idx Piece.queen
-d2d3 = create d2Idx d3Idx Piece.pawn
-d2d4 = create d2Idx d4Idx Piece.pawn
-d5d4 = create d5Idx d4Idx Piece.pawn
-d5e4 = createCapture d5Idx e4Idx Piece.pawn Piece.pawn
-d5f6 = create d5Idx f6Idx Piece.knight
-d7d5 = create d7Idx d5Idx Piece.pawn
-d7d6 = create d7Idx d6Idx Piece.pawn
-d8h4 = create d8Idx h4Idx Piece.queen
-e1g1 = createCastling e1Idx g1Idx
-e2e3 = create e2Idx e3Idx Piece.pawn
-e2e4 = create e2Idx e4Idx Piece.pawn
-e4e5 = create e4Idx e5Idx Piece.pawn
-e4d5 = createCapture e4Idx d5Idx Piece.pawn Piece.pawn
-e7e5 = create e7Idx e5Idx Piece.pawn
-e7e6 = create e7Idx e6Idx Piece.pawn
-f1c4 = create f1Idx c4Idx Piece.bishop
-f2f3 = create f2Idx f3Idx Piece.pawn
-f2f4 = create f2Idx f4Idx Piece.pawn
-f3g1 = create f3Idx g1Idx Piece.knight
-f6g8 = create f6Idx g8Idx Piece.knight
-f7f5 = create f7Idx f5Idx Piece.pawn
-f7f6 = create f7Idx f6Idx Piece.pawn
-f8c5 = create f8Idx c5Idx Piece.bishop
-g2g3 = create g2Idx g3Idx Piece.pawn
-g2g4 = create g2Idx g4Idx Piece.pawn
-g7g5 = create g7Idx g5Idx Piece.pawn
-g7g6 = create g7Idx g6Idx Piece.pawn
-g7h8n = createCapturePromotion g7Idx h8Idx Piece.rook Piece.knight
-h2h3 = create h2Idx h3Idx Piece.pawn
-h2h4 = create h2Idx h4Idx Piece.pawn
-h4h5 = create h4Idx h5Idx Piece.pawn
-h5g6 = createEnPassant h5Idx g6Idx
-h7h5 = create h7Idx h5Idx Piece.pawn
-h7h6 = create h7Idx h6Idx Piece.pawn
+a2a3 = create(a2_idx, a3_idx, Piece.pawn)
+a2a4 = create(a2_idx, a4_idx, Piece.pawn)
+a7a5 = create(a7_idx, a5_idx, Piece.pawn)
+a7a6 = create(a7_idx, a6_idx, Piece.pawn)
+a7a8q = create_promotion(a7_idx, a8_idx, Piece.queen)
+b2b3 = create(b2_idx, b3_idx, Piece.pawn)
+b2b4 = create(b2_idx, b4_idx, Piece.pawn)
+b7b5 = create(b7_idx, b5_idx, Piece.pawn)
+b7b6 = create(b7_idx, b6_idx, Piece.pawn)
+c2c3 = create(c2_idx, c3_idx, Piece.pawn)
+c2c4 = create(c2_idx, c4_idx, Piece.pawn)
+c7c5 = create(c7_idx, c5_idx, Piece.pawn)
+c7c6 = create(c7_idx, c6_idx, Piece.pawn)
+d1h5 = create(d1_idx, h5_idx, Piece.queen)
+d2d3 = create(d2_idx, d3_idx, Piece.pawn)
+d2d4 = create(d2_idx, d4_idx, Piece.pawn)
+d5d4 = create(d5_idx, d4_idx, Piece.pawn)
+d5e4 = create_capture(d5_idx, e4_idx, Piece.pawn, Piece.pawn)
+d5f6 = create(d5_idx, f6_idx, Piece.knight)
+d7d5 = create(d7_idx, d5_idx, Piece.pawn)
+d7d6 = create(d7_idx, d6_idx, Piece.pawn)
+d8h4 = create(d8_idx, h4_idx, Piece.queen)
+e1g1 = create_castling(e1_idx, g1_idx)
+e2e3 = create(e2_idx, e3_idx, Piece.pawn)
+e2e4 = create(e2_idx, e4_idx, Piece.pawn)
+e4e5 = create(e4_idx, e5_idx, Piece.pawn)
+e4d5 = create_capture(e4_idx, d5_idx, Piece.pawn, Piece.pawn)
+e7e5 = create(e7_idx, e5_idx, Piece.pawn)
+e7e6 = create(e7_idx, e6_idx, Piece.pawn)
+f1c4 = create(f1_idx, c4_idx, Piece.bishop)
+f2f3 = create(f2_idx, f3_idx, Piece.pawn)
+f2f4 = create(f2_idx, f4_idx, Piece.pawn)
+f3g1 = create(f3_idx, g1_idx, Piece.knight)
+f6g8 = create(f6_idx, g8_idx, Piece.knight)
+f7f5 = create(f7_idx, f5_idx, Piece.pawn)
+f7f6 = create(f7_idx, f6_idx, Piece.pawn)
+f8c5 = create(f8_idx, c5_idx, Piece.bishop)
+g2g3 = create(g2_idx, g3_idx, Piece.pawn)
+g2g4 = create(g2_idx, g4_idx, Piece.pawn)
+g7g5 = create(g7_idx, g5_idx, Piece.pawn)
+g7g6 = create(g7_idx, g6_idx, Piece.pawn)
+g7h8n = create_capture_promotion(g7_idx, h8_idx, Piece.rook, Piece.knight)
+h2h3 = create(h2_idx, h3_idx, Piece.pawn)
+h2h4 = create(h2_idx, h4_idx, Piece.pawn)
+h4h5 = create(h4_idx, h5_idx, Piece.pawn)
+h5g6 = create_en_passant(h5_idx, g6_idx)
+h7h5 = create(h7_idx, h5_idx, Piece.pawn)
+h7h6 = create(h7_idx, h6_idx, Piece.pawn)
 
-nb1a3 = create b1Idx a3Idx Piece.knight
-nb1c3 = create b1Idx c3Idx Piece.knight
-nb8a6 = create b8Idx a6Idx Piece.knight
-nb8c6 = create b8Idx c6Idx Piece.knight
-ng1f3 = create g1Idx f3Idx Piece.knight
-ng1h3 = create g1Idx h3Idx Piece.knight
-ng8f6 = create g8Idx f6Idx Piece.knight
+nb1a3 = create(b1_idx, a3_idx, Piece.knight)
+nb1c3 = create(b1_idx, c3_idx, Piece.knight)
+nb8a6 = create(b8_idx, a6_idx, Piece.knight)
+nb8c6 = create(b8_idx, c6_idx, Piece.knight)
+ng1f3 = create(g1_idx, f3_idx, Piece.knight)
+ng1h3 = create(g1_idx, h3_idx, Piece.knight)
+ng8f6 = create(g8_idx, f6_idx, Piece.knight)
 
-toStr : Move -> Str
-toStr = \move ->
-    fromIdx = bitwiseAnd (shiftRightZfBy move fromOffset) squareMask
-    toIdx = bitwiseAnd move squareMask
-    promotedIdx = bitwiseAnd (shiftRightZfBy move promotedOffset) pieceMask
-    Str.trim (Str.concat (Str.concat (Square.toStr fromIdx) (Square.toStr toIdx)) (Piece.toStr promotedIdx))
+to_str : Move -> Str
+to_str = |move|
+    from_idx = bitwise_and(shift_right_zf_by(move, from_offset), square_mask)
+    to_idx = bitwise_and(move, square_mask)
+    promoted_idx = bitwise_and(shift_right_zf_by(move, promoted_offset), piece_mask)
+    Str.trim(Str.concat(Str.concat(Square.to_str(from_idx), Square.to_str(to_idx)), Piece.to_str(promoted_idx)))
 
-expect toStr e2e4 == "e2e4"
-expect toStr a7a8q == "a7a8q"
-expect toStr g7h8n == "g7h8n"
+expect to_str(e2e4) == "e2e4"
+expect to_str(a7a8q) == "a7a8q"
+expect to_str(g7h8n) == "g7h8n"
 
-getFrom : Move -> SquareIdx
-getFrom = \move ->
-    bitwiseAnd (shiftRightZfBy move fromOffset) squareMask
+get_from : Move -> SquareIdx
+get_from = |move|
+    bitwise_and(shift_right_zf_by(move, from_offset), square_mask)
 
-expect getFrom e2e4 == e2Idx
-expect getFrom a7a8q == a7Idx
-expect getFrom g7h8n == g7Idx
+expect get_from(e2e4) == e2_idx
+expect get_from(a7a8q) == a7_idx
+expect get_from(g7h8n) == g7_idx
 
-getTo : Move -> SquareIdx
-getTo = \move ->
-    bitwiseAnd move squareMask
+get_to : Move -> SquareIdx
+get_to = |move|
+    bitwise_and(move, square_mask)
 
-expect getTo e2e4 == e4Idx
-expect getTo a7a8q == a8Idx
-expect getTo g7h8n == h8Idx
+expect get_to(e2e4) == e4_idx
+expect get_to(a7a8q) == a8_idx
+expect get_to(g7h8n) == h8_idx
 
-getMoved : Move -> PieceIdx
-getMoved = \move ->
-    bitwiseAnd (shiftRightZfBy move movedOffset) pieceMask
+get_moved : Move -> PieceIdx
+get_moved = |move|
+    bitwise_and(shift_right_zf_by(move, moved_offset), piece_mask)
 
-expect getMoved e2e4 == Piece.pawn
-expect getMoved ng1f3 == Piece.knight
-expect getMoved a7a8q == Piece.pawn
-expect getMoved g7h8n == Piece.pawn
-expect getMoved e1g1 == Piece.king
+expect get_moved(e2e4) == Piece.pawn
+expect get_moved(ng1f3) == Piece.knight
+expect get_moved(a7a8q) == Piece.pawn
+expect get_moved(g7h8n) == Piece.pawn
+expect get_moved(e1g1) == Piece.king
 
-getPromoted : Move -> PieceIdx
-getPromoted = \move ->
-    bitwiseAnd (shiftRightZfBy move promotedOffset) pieceMask
+get_promoted : Move -> PieceIdx
+get_promoted = |move|
+    bitwise_and(shift_right_zf_by(move, promoted_offset), piece_mask)
 
-expect getPromoted e2e4 == Piece.none
-expect getPromoted a7a8q == Piece.queen
-expect getPromoted g7h8n == Piece.knight
+expect get_promoted(e2e4) == Piece.none
+expect get_promoted(a7a8q) == Piece.queen
+expect get_promoted(g7h8n) == Piece.knight
 
-getCaptured : Move -> PieceIdx
-getCaptured = \move ->
-    bitwiseAnd (shiftRightZfBy move capturedOffset) pieceMask
+get_captured : Move -> PieceIdx
+get_captured = |move|
+    bitwise_and(shift_right_zf_by(move, captured_offset), piece_mask)
 
-expect getCaptured e2e4 == Piece.none
-expect getCaptured e4d5 == Piece.pawn
-expect getCaptured g7h8n == Piece.rook
+expect get_captured(e2e4) == Piece.none
+expect get_captured(e4d5) == Piece.pawn
+expect get_captured(g7h8n) == Piece.rook
 
-isCastling : Move -> Bool
-isCastling = \move ->
-    bitwiseAnd move castleMask != 0
+is_castling : Move -> Bool
+is_castling = |move|
+    bitwise_and(move, castle_mask) != 0
 
-expect isCastling e1g1
-expect isCastling e4d5 == Bool.false
-expect isCastling g7h8n == Bool.false
+expect is_castling(e1g1)
+expect is_castling(e4d5) == Bool.false
+expect is_castling(g7h8n) == Bool.false
 
-isEnPassant : Move -> Bool
-isEnPassant = \move ->
-    bitwiseAnd move enPassantMask != 0
+is_en_passant : Move -> Bool
+is_en_passant = |move|
+    bitwise_and(move, en_passant_mask) != 0
 
-expect isEnPassant h5g6
-expect isEnPassant e1g1 == Bool.false
-expect isEnPassant e4d5 == Bool.false
-expect isEnPassant g7h8n == Bool.false
+expect is_en_passant(h5g6)
+expect is_en_passant(e1g1) == Bool.false
+expect is_en_passant(e4d5) == Bool.false
+expect is_en_passant(g7h8n) == Bool.false
 
 # ----------------------------------------------------------------------------
 # Creating moves
 # ----------------------------------------------------------------------------
 
 create : SquareIdx, SquareIdx, PieceIdx -> Move
-create = \fromIdx, toIdx, movedIdx ->
-    (shiftLeftBy movedIdx movedOffset)
-    |> bitwiseOr (shiftLeftBy fromIdx fromOffset)
-    |> bitwiseOr toIdx
+create = |from_idx, to_idx, moved_idx|
+    (shift_left_by(moved_idx, moved_offset))
+    |> bitwise_or(shift_left_by(from_idx, from_offset))
+    |> bitwise_or(to_idx)
 
-createPromotion : SquareIdx, SquareIdx, PieceIdx -> Move
-createPromotion = \fromIdx, toIdx, promotedIdx ->
-    movedPawn
-    |> bitwiseOr (shiftLeftBy promotedIdx promotedOffset)
-    |> bitwiseOr (shiftLeftBy fromIdx fromOffset)
-    |> bitwiseOr toIdx
+create_promotion : SquareIdx, SquareIdx, PieceIdx -> Move
+create_promotion = |from_idx, to_idx, promoted_idx|
+    moved_pawn
+    |> bitwise_or(shift_left_by(promoted_idx, promoted_offset))
+    |> bitwise_or(shift_left_by(from_idx, from_offset))
+    |> bitwise_or(to_idx)
 
-createCapture : SquareIdx, SquareIdx, PieceIdx, PieceIdx -> Move
-createCapture = \fromIdx, toIdx, movedIdx, capturedIdx ->
-    (shiftLeftBy movedIdx movedOffset)
-    |> bitwiseOr (shiftLeftBy capturedIdx capturedOffset)
-    |> bitwiseOr (shiftLeftBy fromIdx fromOffset)
-    |> bitwiseOr toIdx
+create_capture : SquareIdx, SquareIdx, PieceIdx, PieceIdx -> Move
+create_capture = |from_idx, to_idx, moved_idx, captured_idx|
+    (shift_left_by(moved_idx, moved_offset))
+    |> bitwise_or(shift_left_by(captured_idx, captured_offset))
+    |> bitwise_or(shift_left_by(from_idx, from_offset))
+    |> bitwise_or(to_idx)
 
-createCapturePromotion : SquareIdx, SquareIdx, PieceIdx, PieceIdx -> Move
-createCapturePromotion = \fromIdx, toIdx, capturedIdx, promotedIdx ->
-    movedPawn
-    |> bitwiseOr (shiftLeftBy capturedIdx capturedOffset)
-    |> bitwiseOr (shiftLeftBy promotedIdx promotedOffset)
-    |> bitwiseOr (shiftLeftBy fromIdx fromOffset)
-    |> bitwiseOr toIdx
+create_capture_promotion : SquareIdx, SquareIdx, PieceIdx, PieceIdx -> Move
+create_capture_promotion = |from_idx, to_idx, captured_idx, promoted_idx|
+    moved_pawn
+    |> bitwise_or(shift_left_by(captured_idx, captured_offset))
+    |> bitwise_or(shift_left_by(promoted_idx, promoted_offset))
+    |> bitwise_or(shift_left_by(from_idx, from_offset))
+    |> bitwise_or(to_idx)
 
-createCastling : SquareIdx, SquareIdx -> Move
-createCastling = \fromIdx, toIdx ->
-    movedKing
-    |> bitwiseOr (shiftLeftBy fromIdx fromOffset)
-    |> bitwiseOr toIdx
-    |> bitwiseOr castleMask
+create_castling : SquareIdx, SquareIdx -> Move
+create_castling = |from_idx, to_idx|
+    moved_king
+    |> bitwise_or(shift_left_by(from_idx, from_offset))
+    |> bitwise_or(to_idx)
+    |> bitwise_or(castle_mask)
 
-createEnPassant : SquareIdx, SquareIdx -> Move
-createEnPassant = \fromIdx, toIdx ->
-    movedPawn
-    |> bitwiseOr capturedPawn
-    |> bitwiseOr (shiftLeftBy fromIdx fromOffset)
-    |> bitwiseOr toIdx
-    |> bitwiseOr enPassantMask
+create_en_passant : SquareIdx, SquareIdx -> Move
+create_en_passant = |from_idx, to_idx|
+    moved_pawn
+    |> bitwise_or(captured_pawn)
+    |> bitwise_or(shift_left_by(from_idx, from_offset))
+    |> bitwise_or(to_idx)
+    |> bitwise_or(en_passant_mask)
